@@ -81,6 +81,7 @@ lerna-debug.log*
 .settings/
 *.sublime-project
 *.sublime-workspace
+.cursor/
 
 # OS
 .DS_Store
