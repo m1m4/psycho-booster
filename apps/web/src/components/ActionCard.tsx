@@ -26,7 +26,7 @@ export function ActionCard({ title, description, icon, onClick, href }: ActionCa
         </div>
     );
 
-    const className = "group relative bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg p-8 hover:border-[#4169E1] dark:hover:border-[#4169E1] active:scale-[0.98] active:bg-gray-50 dark:active:bg-gray-900 transition-all duration-200 text-start touch-manipulation w-full block";
+    const className = "group relative bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg p-8 hover:border-[#4169E1] dark:hover:border-[#4169E1] active:scale-[0.98] active:bg-gray-100 dark:active:bg-gray-800 transition-all duration-200 text-start touch-manipulation w-full block";
 
     if (href) {
         return (
