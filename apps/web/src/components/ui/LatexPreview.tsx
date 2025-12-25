@@ -1,26 +1,39 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
 // @ts-ignore
 import renderMathInElement from 'katex/dist/contrib/auto-render';
 
+/**
+ * Props for the LatexPreview component.
+ */
 interface LatexPreviewProps {
+    /** The content (text and/or LaTeX) to render */
     content: string;
+    /** Accessibility label (unused in current render) */
     label?: string;
+    /** Placeholder text when content is empty */
     placeholder?: string;
 }
 
-export function LatexPreview({ content, label = "תצוגה מקדימה", placeholder = "אין תוכן להצגה" }: LatexPreviewProps) {
+/**
+ * A component that renders LaTeX and markdown-style bold text using KaTeX.
+ * Supports inline ($...$) and block ($$...$$) math delimiters.
+ */
+export function LatexPreview({ content, placeholder = "אין תוכן להצגה" }: LatexPreviewProps) {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (containerRef.current && isOpen) {
-            // Reset content to plain text to avoid duplicating renders or processing already processed HTML
-            containerRef.current.innerText = content || placeholder;
+            const displayContent = content || placeholder;
+
+            // Process bold markdown (**text**) into HTML while preserving content
+            const processedContent = displayContent.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+            containerRef.current.innerHTML = processedContent;
 
             if (content) {
                 try {
@@ -40,12 +53,6 @@ export function LatexPreview({ content, label = "תצוגה מקדימה", place
             }
         }
     }, [content, isOpen, placeholder]);
-
-    // Don't show the toggle if there's no content, unless you want to let them open an empty preview
-    // But usually it's better to allow it so they can see "No content" if they really want.
-    // However, for cleaner UI, maybe only show if there is content?
-    // The requirement says "add collapsable preview... showing it after it was formatted".
-    // I will always show the button.
 
     return (
         <div className="w-full mt-2">
@@ -69,8 +76,12 @@ export function LatexPreview({ content, label = "תצוגה מקדימה", place
             {isOpen && (
                 <div
                     ref={containerRef}
-                    className="p-4 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg text-black dark:text-white min-h-[60px] text-right shadow-sm [&_.katex]:[direction:ltr] [&_.katex]:[unicode-bidi:isolate]"
-                    dir="rtl"
+                    className="p-4 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg text-black dark:text-white min-h-[60px] shadow-sm whitespace-pre-wrap break-words [&_strong]:font-bold"
+                    style={{
+                        lineHeight: '1.8',
+                        direction: 'rtl',
+                        unicodeBidi: 'plaintext'
+                    }}
                 />
             )}
         </div>
