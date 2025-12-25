@@ -1,14 +1,26 @@
 import React from 'react';
 import Link from 'next/link';
 
+/**
+ * Props for the ActionCard component.
+ */
 interface ActionCardProps {
+    /** Title of the card */
     title: string;
+    /** Description text of the card */
     description: string;
+    /** Icon element to display */
     icon: React.ReactNode;
+    /** Callback fired when the card is clicked (if href is not provided) */
     onClick?: () => void;
+    /** URL to navigate to when the card is clicked */
     href?: string;
 }
 
+/**
+ * A generic card component used for primary actions on the dashboard.
+ * Supports both link navigation and button clicks.
+ */
 export function ActionCard({ title, description, icon, onClick, href }: ActionCardProps) {
     const content = (
         <div className="space-y-4">
