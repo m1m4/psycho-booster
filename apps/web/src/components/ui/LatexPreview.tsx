@@ -76,10 +76,11 @@ export function LatexPreview({ content, placeholder = "אין תוכן להצג�
             {isOpen && (
                 <div
                     ref={containerRef}
-                    className="p-4 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg text-black dark:text-white min-h-[60px] text-right shadow-sm whitespace-pre-wrap break-words [&_strong]:font-bold"
+                    className="p-4 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg text-black dark:text-white min-h-[60px] shadow-sm whitespace-pre-wrap break-words [&_strong]:font-bold"
                     style={{
                         lineHeight: '1.8',
                         direction: 'rtl',
+                        unicodeBidi: 'plaintext'
                     }}
                 />
             )}

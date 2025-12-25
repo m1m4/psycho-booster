@@ -83,8 +83,29 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
         const direction = (props.dir as any) || getDirection(value);
 
+        const sharedStyles: React.CSSProperties = {
+            direction: direction,
+            lineHeight: '24px',
+            fontSize: '16px',
+            fontFamily: 'inherit',
+            padding: '12px 16px',
+            margin: '0',
+            border: 'none',
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'break-word',
+            boxSizing: 'border-box',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
+            textAlign: direction === 'rtl' ? 'right' : 'left',
+            letterSpacing: 'normal',
+            wordSpacing: 'normal',
+            textTransform: 'none',
+            fontVariantNumeric: 'tabular-nums',
+            textRendering: 'optimizeLegibility',
+        };
+
         return (
-            <div className="w-full space-y-2">
+            <div className="w-full space-y-2" style={{ boxSizing: 'border-box' }}>
                 {label && (
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         {label}
@@ -96,13 +117,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 `}>
                     <div
                         ref={highlightRef}
-                        className="absolute inset-0 px-4 py-3 pointer-events-none whitespace-pre-wrap break-words text-black dark:text-white"
+                        className="absolute inset-0 pointer-events-none text-black dark:text-white"
                         style={{
-                            direction: direction,
-                            lineHeight: '1.6',
-                            fontFamily: 'inherit',
-                            fontSize: 'inherit',
-                            WebkitFontSmoothing: 'antialiased',
+                            ...sharedStyles,
                         }}
                         dangerouslySetInnerHTML={{ __html: getHighlightedContent(String(value || '')) }}
                     />
@@ -120,16 +137,16 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                         }}
                         onScroll={handleScroll}
                         className={`
-                            relative w-full px-4 py-3 bg-transparent text-transparent caret-black dark:caret-white
+                            relative w-full bg-transparent caret-black dark:caret-white
                             placeholder:text-gray-500 dark:placeholder:text-gray-400
                             focus:outline-none min-h-[120px] resize-none overflow-hidden
                             ${className}
                         `}
                         style={{
-                            lineHeight: '1.6',
-                            fontFamily: 'inherit',
-                            fontSize: 'inherit',
+                            ...sharedStyles,
+                            color: 'transparent',
                             WebkitTextFillColor: 'transparent',
+                            WebkitTapHighlightColor: 'transparent',
                         }}
                         {...props}
                     />
@@ -138,8 +155,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
                 <style jsx>{`
                     strong {
-                        font-weight: 700;
+                        font-weight: normal;
                         color: inherit;
+                        /* Use a very subtle text-stroke for bolding to keep character widths identical */
+                        -webkit-text-stroke: 0.5px currentColor;
+                        paint-order: stroke fill;
+                        letter-spacing: -0.2px; /* Tiny adjustment to compensate for stroke-induced width */
                     }
                 `}</style>
             </div>

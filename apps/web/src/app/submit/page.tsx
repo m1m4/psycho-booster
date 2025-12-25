@@ -7,8 +7,11 @@ import { QuestionMetadata } from '@/components/features/submit/QuestionMetadata'
 import { SharedAsset } from '@/components/features/submit/SharedAsset';
 import { QuestionTabs } from '@/components/features/submit/QuestionTabs';
 import { SingleQuestionForm } from '@/components/features/submit/SingleQuestionForm';
+import { uploadFile } from '@/lib/firebase/upload';
+import { saveQuestionSet } from '@/lib/firebase/db';
 
 export default function SubmitPage() {
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         category: '',
         subcategory: '',
@@ -118,8 +121,10 @@ export default function SubmitPage() {
         });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (isSubmitting) return;
 
         const errors: Record<string, boolean> = {};
         let firstErrorId = '';
@@ -171,8 +176,85 @@ export default function SubmitPage() {
             return;
         }
 
-        console.log('Form Submitted', formData);
-        alert(`Question set submitted with ${formData.questions.length} questions`);
+        setIsSubmitting(true);
+        const submissionId = Date.now().toString();
+
+        try {
+            // Upload Asset File if exists
+            let assetImageUrl = '';
+            if (formData.assetFile) {
+                const ext = formData.assetFile.name.split('.').pop();
+                const path = `uploads/${submissionId}/asset.${ext}`;
+                assetImageUrl = await uploadFile(formData.assetFile, path);
+            }
+
+            // Process Questions in parallel
+            const processedQuestions = await Promise.all(formData.questions.map(async (q, idx) => {
+                const qPrefix = `uploads/${submissionId}/q${idx}`;
+
+                // Helper to upload if file exists
+                const uploadIfFile = async (file: File | null, suffix: string) => {
+                    if (!file) return null;
+                    const ext = file.name.split('.').pop();
+                    return await uploadFile(file, `${qPrefix}_${suffix}.${ext}`);
+                };
+
+                const [qImg, a1Img, a2Img, a3Img, a4Img] = await Promise.all([
+                    uploadIfFile(q.questionImage, 'question'),
+                    uploadIfFile(q.answer1Image, 'ans1'),
+                    uploadIfFile(q.answer2Image, 'ans2'),
+                    uploadIfFile(q.answer3Image, 'ans3'),
+                    uploadIfFile(q.answer4Image, 'ans4'),
+                ]);
+
+                return {
+                    id: parseInt(submissionId) + idx, // Unique ID per question
+                    difficulty: q.difficulty,
+                    questionText: q.questionText,
+                    questionImageUrl: qImg,
+                    answer1: q.answer1,
+                    answer1ImageUrl: a1Img,
+                    answer2: q.answer2,
+                    answer2ImageUrl: a2Img,
+                    answer3: q.answer3,
+                    answer3ImageUrl: a3Img,
+                    answer4: q.answer4,
+                    answer4ImageUrl: a4Img,
+                    correctAnswer: q.correctAnswer,
+                    explanation: q.explanation,
+                };
+            }));
+
+            const finalData = {
+                id: parseInt(submissionId),
+                category: formData.category,
+                subcategory: formData.subcategory,
+                assetText: formData.assetText,
+                assetImageUrl: assetImageUrl || null,
+                questions: processedQuestions,
+            };
+
+            await saveQuestionSet(submissionId, finalData);
+
+            console.log('Form Submitted to Firebase', finalData);
+            alert(`Question set submitted successfully! ID: ${submissionId}`);
+
+            // Reset Form and generate new IDs
+            setFormData({
+                category: '',
+                subcategory: '',
+                assetFile: null,
+                assetText: '',
+                questions: [DEFAULT_QUESTION],
+            });
+            setActiveQuestionIndex(0);
+
+        } catch (error) {
+            console.error("Submission failed:", error);
+            alert("Failed to submit question set. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const labels = {
@@ -188,15 +270,20 @@ export default function SubmitPage() {
     const isSubCategorySelected = !!formData.subcategory;
 
     return (
-        <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white pb-20">
-            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
-                <div className="space-y-2 text-center sm:text-right">
-                    <h1 className="text-3xl font-bold tracking-tight">הוספת שאלה חדשה</h1>
-                    <p className="text-gray-500 dark:text-gray-400">
-                        מלא את הפרטים הבאים כדי להוסיף שאלה או סט שאלות למאגר
-                    </p>
+        <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
+            <header className="sticky top-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between" dir="rtl">
+                    <h1 className="text-xl font-bold text-black dark:text-white">הוספת שאלה</h1>
+                    <Link
+                        href="/"
+                        className="text-sm text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                    >
+                        {isEnglish ? 'Back to Dashboard' : 'חזרה למסך הראשי'}
+                    </Link>
                 </div>
+            </header>
 
+            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
                 <form onSubmit={handleSubmit} className="space-y-8" dir="rtl">
                     <QuestionMetadata
                         category={formData.category}
@@ -258,20 +345,17 @@ export default function SubmitPage() {
                         />
                     </div>
 
-                    <div className="flex justify-between items-center pt-8 border-t border-gray-200 dark:border-gray-800">
+                    <div className="flex justify-center sm:justify-start pt-8 border-t border-gray-200 dark:border-gray-800">
                         <button
                             type="submit"
-                            disabled={!isSubCategorySelected}
-                            className="bg-[#4169E1] text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-600 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                            disabled={!isSubCategorySelected || isSubmitting}
+                            className="w-full sm:w-auto bg-[#4169E1] text-white px-12 py-4 rounded-lg font-semibold hover:bg-blue-600 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-lg shadow-blue-500/20"
                         >
-                            {isEnglish ? 'Submit Question(s)' : 'שמור שאלה'}
+                            {isSubmitting
+                                ? (isEnglish ? 'Submitting...' : 'שולח...')
+                                : (isEnglish ? 'Submit Question(s)' : 'שמור שאלה')
+                            }
                         </button>
-                        <Link
-                            href="/"
-                            className="border border-gray-200 dark:border-gray-800 text-black dark:text-white px-8 py-3 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-900 active:scale-95 transition-all text-center"
-                        >
-                            {isEnglish ? 'Back to Dashboard' : 'חזרה למסך הראשי'}
-                        </Link>
                     </div>
                 </form>
             </main>

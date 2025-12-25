@@ -6,14 +6,21 @@ import { ActionCard } from '@/components/features/home/ActionCard';
 export default function Home() {
     return (
         <div className="min-h-screen bg-white dark:bg-black" dir="rtl">
-            <main className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
+            <header className="sticky top-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                    <h1 className="text-xl font-bold text-black dark:text-white">Psycho Booster</h1>
+                    <p className="text-sm text-gray-500 font-medium">פאנל ניהול</p>
+                </div>
+            </header>
+
+            <main className="flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
                 <div className="w-full max-w-3xl mx-auto space-y-16">
                     <div className="text-center space-y-3">
                         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-black dark:text-white tracking-tight">
-                            Psycho Booster
+                            ברוכים הבאים
                         </h1>
-                        <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium">
-                            פאנל ניהול
+                        <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium max-w-lg mx-auto leading-relaxed">
+                            נהלו את מאגר השאלות של Psycho Booster בקלות ובמקום אחד
                         </p>
                     </div>
 
@@ -32,6 +39,7 @@ export default function Home() {
                         <ActionCard
                             title="צפייה"
                             description="צפייה וניהול שאלות קיימות"
+                            href="/viewer"
                             icon={
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

@@ -36,7 +36,7 @@ export function SharedAsset({
                 {isChartInference ? 'קובץ תרשים משותף' : (isEnglish ? 'Reading Passage' : 'קטע קריאה')}
             </h2>
 
-            {isChartInference ? (
+            {isChartInference && (
                 <div className="space-y-4">
                     <div className="flex items-start gap-4">
                         <div className="flex-1">
@@ -88,14 +88,17 @@ export function SharedAsset({
                         </div>
                     </div>
                 </div>
-            ) : (
+            )}
+
+            {/* Always show text for Reading Comprehension, and also show it for Chart Inference if needed */}
+            {(isChartInference || !isChartInference) && (
                 <>
                     <Textarea
                         name="assetText"
                         id="asset-text"
                         value={assetText}
                         onChange={onTextChange}
-                        placeholder={isEnglish ? 'Enter passage text here...' : 'הזן את קטע הקריאה כאן...'}
+                        placeholder={isEnglish ? 'Enter passage text here...' : (isChartInference ? 'הזן מלל מקדים לתרשים (אופציונלי)...' : 'הזן את קטע הקריאה כאן...')}
                         dir={isEnglish ? 'ltr' : 'rtl'}
                         disabled={!isSubCategorySelected}
                         error={textError ? ' ' : undefined}
