@@ -23,11 +23,10 @@ interface LatexPreviewProps {
  * Supports inline ($...$) and block ($$...$$) math delimiters.
  */
 export function LatexPreview({ content, placeholder = "אין תוכן להצגה" }: LatexPreviewProps) {
-    const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (containerRef.current && isOpen) {
+        if (containerRef.current) {
             const displayContent = content || placeholder;
 
             // Process bold markdown (**text**) into HTML while preserving content
@@ -52,38 +51,37 @@ export function LatexPreview({ content, placeholder = "אין תוכן להצג�
                 }
             }
         }
-    }, [content, isOpen, placeholder]);
+    }, [content, placeholder]);
 
     return (
         <div className="w-full mt-2">
-            <button
-                type="button"
-                onClick={() => setIsOpen(!isOpen)}
-                className="text-sm text-[#4169E1] hover:text-blue-700 flex items-center gap-1 transition-colors font-medium mb-2"
-                aria-expanded={isOpen}
-            >
-                {isOpen ? 'הסתר תצוגה מקדימה' : 'הצג תצוגה מקדימה (LaTeX)'}
-                <svg
-                    className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
-
-            {isOpen && (
+            <div className="relative">
                 <div
                     ref={containerRef}
                     className="p-4 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg text-black dark:text-white min-h-[60px] shadow-sm whitespace-pre-wrap break-words [&_strong]:font-bold"
                     style={{
                         lineHeight: '1.8',
                         direction: 'rtl',
-                        unicodeBidi: 'plaintext'
+                        unicodeBidi: 'plaintext',
+                        textAlign: 'right'
                     }}
                 />
-            )}
+                <style jsx global>{`
+                    .katex-display, .katex {
+                        direction: ltr !important;
+                        unicode-bidi: isolate !important;
+                        text-align: left;
+                    }
+                    .katex-display {
+                        margin: 1em 0;
+                    }
+                    /* Ensure inline math doesn't mess up RTL line flow but remains LTR internally */
+                    .katex {
+                        display: inline-block;
+                        white-space: nowrap;
+                    }
+                `}</style>
+            </div>
         </div>
     );
 }

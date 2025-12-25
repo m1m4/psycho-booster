@@ -6,8 +6,10 @@ import { SUBCATEGORY_OPTIONS } from '@/types/submit';
 interface QuestionMetadataProps {
     category: string;
     subcategory: string;
+    topic: string;
     onCategoryChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
     onMetadataChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+    onSubcategoryChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
     questionCount: number;
     onSliderChange: (count: number) => void;
     isQuestionSet: boolean;
@@ -16,11 +18,15 @@ interface QuestionMetadataProps {
     isEnglish: boolean;
 }
 
+import { TOPIC_OPTIONS } from '@/types/submit';
+
 export function QuestionMetadata({
     category,
     subcategory,
+    topic,
     onCategoryChange,
     onMetadataChange,
+    onSubcategoryChange,
     questionCount,
     onSliderChange,
     isQuestionSet,
@@ -52,7 +58,7 @@ export function QuestionMetadata({
                     name="subcategory"
                     id="subcategory-select"
                     value={subcategory}
-                    onChange={onMetadataChange}
+                    onChange={onSubcategoryChange}
                     placeholder={isEnglish ? 'Select Subcategory...' : 'בחר תת-קטגוריה...'}
                     options={category ? SUBCATEGORY_OPTIONS[category as keyof typeof SUBCATEGORY_OPTIONS] || [] : []}
                     required
@@ -61,6 +67,23 @@ export function QuestionMetadata({
                     error={errors['subcategory-select'] ? ' ' : undefined}
                 />
             </div>
+
+            {category === 'quantitative' && subcategory && TOPIC_OPTIONS[subcategory] && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Select
+                        label="נושא"
+                        name="topic"
+                        id="topic-select"
+                        value={topic}
+                        onChange={onMetadataChange}
+                        placeholder="בחר נושא..."
+                        options={TOPIC_OPTIONS[subcategory] || []}
+                        required
+                        disabled={!subcategory}
+                        error={errors['topic-select'] ? ' ' : undefined}
+                    />
+                </div>
+            )}
 
             {isQuestionSet && (
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">

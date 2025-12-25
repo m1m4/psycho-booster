@@ -41,7 +41,7 @@ export function SingleQuestionForm({
             className="flex-1 bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl space-y-6 border border-gray-200 dark:border-gray-800 scroll-mt-20"
             dir={isEnglish ? 'ltr' : 'rtl'}
         >
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-4">
                 <h2 className="text-xl font-semibold">
                     {isQuestionSet
                         ? (isEnglish ? `Question ${activeQuestionIndex + 1}` : `שאלה ${activeQuestionIndex + 1}`)

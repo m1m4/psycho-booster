@@ -8,13 +8,19 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
     label?: string;
     /** Error message displayed below the textarea */
     error?: string;
+    /** Custom minimum height */
+    minHeight?: string;
+    /** Whether to auto-detect direction */
+    autoDir?: boolean;
+    /** Whether to restrict to a single line */
+    singleLine?: boolean;
 }
 
 /**
  * A custom Textarea component that supports auto-height and real-time bold text highlighting (**text**).
  */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-    ({ className = '', label, error, onChange, value, ...props }, ref) => {
+    ({ className = '', label, error, onChange, value, minHeight = '120px', autoDir = true, singleLine = false, ...props }, ref) => {
         const textareaRef = useRef<HTMLTextAreaElement | null>(null);
         const highlightRef = useRef<HTMLDivElement | null>(null);
 
@@ -22,6 +28,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
          * Adjusts the height of the textarea and its highlight layer based on its content.
          */
         const adjustHeight = () => {
+            if (singleLine) return;
             const element = textareaRef.current;
             if (element) {
                 element.style.height = 'auto';
@@ -50,6 +57,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
                 .replace(/\*\*(.*?)\*\*/g, '<strong>**$1**</strong>')
+                .replace(/(\$\$?)([^\$]+?)(\$\$?)/g, (match, d1, content, d2) => {
+                    // Wrap LaTeX math in LTR span to prevent BiDi reordering of delimiters
+                    return `<span dir="ltr" style="unicode-bidi: isolate; display: inline-block;">${d1}${content}${d2}</span>`;
+                })
                 .replace(/\n/g, '<br/>');
         };
 
@@ -81,17 +92,17 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             return /^[A-Za-z]/.test(firstChar) ? 'ltr' : 'rtl';
         };
 
-        const direction = (props.dir as any) || getDirection(value);
+        const direction = (props.dir as any) || (autoDir ? getDirection(value) : 'rtl');
 
         const sharedStyles: React.CSSProperties = {
             direction: direction,
             lineHeight: '24px',
             fontSize: '16px',
             fontFamily: 'inherit',
-            padding: '12px 16px',
+            padding: singleLine ? '10px 16px' : '12px 16px',
             margin: '0',
             border: 'none',
-            whiteSpace: 'pre-wrap',
+            whiteSpace: singleLine ? 'nowrap' : 'pre-wrap',
             overflowWrap: 'break-word',
             boxSizing: 'border-box',
             WebkitFontSmoothing: 'antialiased',
@@ -102,6 +113,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             textTransform: 'none',
             fontVariantNumeric: 'tabular-nums',
             textRendering: 'optimizeLegibility',
+            unicodeBidi: 'plaintext',
         };
 
         return (
@@ -133,17 +145,23 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                         dir={direction}
                         value={value}
                         onChange={(e) => {
+                            if (singleLine) {
+                                e.target.value = e.target.value.replace(/\n/g, '');
+                            }
                             if (onChange) onChange(e);
                         }}
                         onScroll={handleScroll}
+                        rows={singleLine ? 1 : undefined}
                         className={`
                             relative w-full bg-transparent caret-black dark:caret-white
                             placeholder:text-gray-500 dark:placeholder:text-gray-400
-                            focus:outline-none min-h-[120px] resize-none overflow-hidden
+                            focus:outline-none resize-none ${singleLine ? 'overflow-x-auto overflow-y-hidden' : 'overflow-hidden'}
                             ${className}
                         `}
                         style={{
                             ...sharedStyles,
+                            height: singleLine ? minHeight : undefined,
+                            minHeight: minHeight,
                             color: 'transparent',
                             WebkitTextFillColor: 'transparent',
                             WebkitTapHighlightColor: 'transparent',
