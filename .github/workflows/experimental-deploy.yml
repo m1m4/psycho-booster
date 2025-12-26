@@ -34,3 +34,4 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PSYCHO_BOOSTER }}'
           expires: 1d  # Link valid for 24 hours
           projectId: psycho-booster
+          channelId: experimental  # Added channelId for push events
