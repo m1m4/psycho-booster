@@ -1,12 +1,12 @@
-name: Deploy to Firebase Hosting (Production)
+name: Experimental 24h Shareable Preview
 
 on:
   push:
     branches:
-      - master  # Merging/Pushing to master updates the live site
+      - experimental  # Trigger only when pushing to experimental branch
 
 jobs:
-  build_and_deploy:
+  deploy_preview:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -27,10 +27,10 @@ jobs:
         working-directory: apps/web
         run: npm run build
 
-      - name: Deploy to Firebase Hosting (LIVE)
+      - name: Deploy Shareable Preview (Expires in 1 day)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PSYCHO_BOOSTER }}'
-          channelId: live
+          expires: 1d  # Link valid for 24 hours
           projectId: psycho-booster

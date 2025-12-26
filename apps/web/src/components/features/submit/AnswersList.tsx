@@ -1,5 +1,5 @@
 import React from 'react';
-import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import { LatexPreview } from '@/components/ui/LatexPreview';
 import { CameraIcon, XIcon } from './SubmitIcons';
 import { QuestionItem } from '@/types/submit';
@@ -60,12 +60,13 @@ export function AnswersList({
                                     </div>
                                     <div className="flex-1 flex gap-2">
                                         {!answerImageValue ? (
-                                            <Input
+                                            <Textarea
                                                 id={`q${activeQuestionIndex}-ans${num}`}
                                                 placeholder={`${labels.answerPlaceholder} ${num}`}
                                                 value={answerValue}
                                                 onChange={(e) => handleQuestionChange(answerKey, e.target.value)}
-                                                required
+                                                singleLine={true}
+                                                minHeight="46px"
                                                 className={`transition-all ${hasSelection
                                                     ? isCorrect
                                                         ? 'border-2 border-green-500 bg-green-50/5 dark:bg-green-500/10'
@@ -132,6 +133,7 @@ export function AnswersList({
                                         <LatexPreview
                                             content={answerValue}
                                             label={isEnglish ? `Preview Answer ${num}` : `תצוגה מקדימה לתשובה ${num}`}
+                                            isEnglish={isEnglish}
                                         />
                                     </div>
                                 )}

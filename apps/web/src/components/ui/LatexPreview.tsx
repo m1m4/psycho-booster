@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import 'katex/dist/katex.min.css';
 
 // @ts-ignore
@@ -16,19 +16,37 @@ interface LatexPreviewProps {
     label?: string;
     /** Placeholder text when content is empty */
     placeholder?: string;
+    /** Whether to remove background and border */
+    minimal?: boolean;
+    /** Whether the context is English (affects alignment) */
+    isEnglish?: boolean;
 }
+
+const hasHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
 
 /**
  * A component that renders LaTeX and markdown-style bold text using KaTeX.
  * Supports inline ($...$) and block ($$...$$) math delimiters.
  */
-export function LatexPreview({ content, placeholder = "אין תוכן להצגה" }: LatexPreviewProps) {
-    const [isOpen, setIsOpen] = useState(false);
+export function LatexPreview({
+    content,
+    placeholder,
+    minimal = false,
+    isEnglish = false
+}: LatexPreviewProps) {
     const containerRef = useRef<HTMLDivElement>(null);
+    const defaultPlaceholder = isEnglish ? "No content to display" : "אין תוכן להצגה";
+    const actualPlaceholder = placeholder || defaultPlaceholder;
+
+    // Determine alignment: 
+    // If NOT English category, always RTL/Right.
+    // If English category, RTL/Right ONLY if Hebrew is detected.
+    const isHebrew = hasHebrew(content || "");
+    const shouldBeRtl = !isEnglish || isHebrew;
 
     useEffect(() => {
-        if (containerRef.current && isOpen) {
-            const displayContent = content || placeholder;
+        if (containerRef.current) {
+            const displayContent = content || actualPlaceholder;
 
             // Process bold markdown (**text**) into HTML while preserving content
             const processedContent = displayContent.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -52,38 +70,42 @@ export function LatexPreview({ content, placeholder = "אין תוכן להצג�
                 }
             }
         }
-    }, [content, isOpen, placeholder]);
+    }, [content, placeholder]);
 
     return (
-        <div className="w-full mt-2">
-            <button
-                type="button"
-                onClick={() => setIsOpen(!isOpen)}
-                className="text-sm text-[#4169E1] hover:text-blue-700 flex items-center gap-1 transition-colors font-medium mb-2"
-                aria-expanded={isOpen}
-            >
-                {isOpen ? 'הסתר תצוגה מקדימה' : 'הצג תצוגה מקדימה (LaTeX)'}
-                <svg
-                    className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
-
-            {isOpen && (
+        <div className={`w-full ${minimal ? '' : 'mt-2'}`}>
+            <div className="relative">
                 <div
                     ref={containerRef}
-                    className="p-4 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg text-black dark:text-white min-h-[60px] shadow-sm whitespace-pre-wrap break-words [&_strong]:font-bold"
+                    className={`
+                        ${minimal
+                            ? 'p-0 bg-transparent border-none shadow-none'
+                            : 'p-4 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm'} 
+                        text-black dark:text-white min-h-[auto] whitespace-pre-wrap break-words [&_strong]:font-bold
+                    `}
                     style={{
                         lineHeight: '1.8',
-                        direction: 'rtl',
-                        unicodeBidi: 'plaintext'
+                        direction: shouldBeRtl ? 'rtl' : 'ltr',
+                        unicodeBidi: 'plaintext',
+                        textAlign: shouldBeRtl ? 'right' : 'left'
                     }}
                 />
-            )}
+                <style jsx global>{`
+                    .katex-display, .katex {
+                        direction: ltr !important;
+                        unicode-bidi: isolate !important;
+                        text-align: left;
+                    }
+                    .katex-display {
+                        margin: 1em 0;
+                    }
+                    /* Ensure inline math doesn't mess up RTL line flow but remains LTR internally */
+                    .katex {
+                        display: inline-block;
+                        white-space: nowrap;
+                    }
+                `}</style>
+            </div>
         </div>
     );
 }

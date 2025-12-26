@@ -33,6 +33,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                         ${error ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-800'}
                         ${className}
                     `}
+                    style={{ unicodeBidi: 'plaintext' }}
                     {...props}
                 />
                 {error && (

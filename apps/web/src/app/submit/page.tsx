@@ -7,14 +7,19 @@ import { QuestionMetadata } from '@/components/features/submit/QuestionMetadata'
 import { SharedAsset } from '@/components/features/submit/SharedAsset';
 import { QuestionTabs } from '@/components/features/submit/QuestionTabs';
 import { SingleQuestionForm } from '@/components/features/submit/SingleQuestionForm';
+import { PreviewModal } from '@/components/features/submit/PreviewModal';
 import { uploadFile } from '@/lib/firebase/upload';
 import { saveQuestionSet } from '@/lib/firebase/db';
 
+
 export default function SubmitPage() {
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [submissionId, setSubmissionId] = useState<string>('');
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [formData, setFormData] = useState({
         category: '',
         subcategory: '',
+        topic: '',
         assetFile: null as File | null,
         assetText: '',
         questions: [DEFAULT_QUESTION] as QuestionItem[],
@@ -61,7 +66,21 @@ export default function SubmitPage() {
     };
 
     const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setFormData(prev => ({ ...prev, subcategory: '', category: e.target.value }));
+        const value = e.target.value;
+        setFormData(prev => ({
+            ...prev,
+            category: value,
+            subcategory: '',
+            topic: '',
+            // Clear questions and reset to default to avoid carryover logic issues
+            questions: [DEFAULT_QUESTION]
+        }));
+        setActiveQuestionIndex(0);
+    };
+
+    const handleSubcategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setFormData(prev => ({ ...prev, subcategory: e.target.value, topic: '' }));
+        setActiveQuestionIndex(0);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,8 +143,21 @@ export default function SubmitPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (isSubmitting) return;
+        // Validate
+        if (!validateForm()) {
+            // Scroll to error
+            const firstError = document.querySelector('[class*="border-red-500"]');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+        }
 
+        // Open preview
+        setIsPreviewOpen(true);
+    };
+
+    const validateForm = () => {
         const errors: Record<string, boolean> = {};
         let firstErrorId = '';
 
@@ -141,6 +173,9 @@ export default function SubmitPage() {
 
         if (!formData.category) setError('category-select');
         if (!formData.subcategory) setError('subcategory-select');
+        if (formData.category === 'quantitative' && !formData.topic && formData.subcategory !== 'chart_inference') {
+            setError('topic-select');
+        }
 
         if (isReadingComprehension && !formData.assetText) setError('asset-text');
         if (isChartInference && !formData.assetFile) setError('asset-file-container');
@@ -171,12 +206,15 @@ export default function SubmitPage() {
 
             setTimeout(() => {
                 setFormErrors({});
-            }, 1000);
+            }, 3000);
 
-            return;
+            return false;
         }
+        return true;
+    };
 
-        setIsSubmitting(true);
+    const handleConfirmSubmit = async () => {
+        setLoading(true);
         const submissionId = Date.now().toString();
 
         try {
@@ -229,6 +267,7 @@ export default function SubmitPage() {
                 id: parseInt(submissionId),
                 category: formData.category,
                 subcategory: formData.subcategory,
+                topic: formData.topic,
                 assetText: formData.assetText,
                 assetImageUrl: assetImageUrl || null,
                 questions: processedQuestions,
@@ -243,17 +282,19 @@ export default function SubmitPage() {
             setFormData({
                 category: '',
                 subcategory: '',
+                topic: '',
                 assetFile: null,
                 assetText: '',
                 questions: [DEFAULT_QUESTION],
             });
             setActiveQuestionIndex(0);
+            setIsPreviewOpen(false);
 
         } catch (error) {
             console.error("Submission failed:", error);
             alert("Failed to submit question set. Please try again.");
         } finally {
-            setIsSubmitting(false);
+            setLoading(false);
         }
     };
 
@@ -269,17 +310,63 @@ export default function SubmitPage() {
     const showLatex = formData.category === 'quantitative';
     const isSubCategorySelected = !!formData.subcategory;
 
+    const handleGenerateChartMockData = () => {
+        const mockData = {
+            category: 'quantitative',
+            subcategory: 'chart_inference',
+            topic: '',
+            assetFile: null,
+            assetText: 'תרשים זה מתאר את התפלגות התלמידים לפי צבע העיניים בכיתה י"א 5. ציר ה-X מתאר את הצבע (כחול, חום, ירוק) וציר ה-Y את מספר התלמידים.\n\nנתון כי בכיתה ישנם 40 תלמידים בסך הכל.',
+            questions: [
+                {
+                    id: 1,
+                    questionText: 'כמה תלמידים בעלי עיניים **כחולות** יש בכיתה אם ידוע שהם מהווים 20%?',
+                    questionImage: null,
+                    answer1: '8',
+                    answer1Image: null,
+                    answer2: '10',
+                    answer2Image: null,
+                    answer3: '5',
+                    answer3Image: null,
+                    answer4: '12',
+                    answer4Image: null,
+                    correctAnswer: '1',
+                    explanation: '20% מתוך 40 הם $\\frac{20}{100} \\cdot 40 = 8$.',
+                    difficulty: 'easy',
+                },
+                {
+                    ...DEFAULT_QUESTION,
+                    id: 2,
+                    questionText: 'מה היחס בין תלמידים עם עיניים חומות לירוקות?',
+                    difficulty: 'medium'
+                },
+                {
+                    ...DEFAULT_QUESTION,
+                    id: 3,
+                    questionText: 'אם יתווספו 5 תלמידים עם עיניים כחולות, מה יהיה האחוז החדש?',
+                    difficulty: 'hard'
+                }
+            ],
+        };
+
+        setFormData(mockData);
+        setSubmissionId(Date.now().toString());
+        setIsPreviewOpen(true);
+    };
+
     return (
         <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
             <header className="sticky top-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between" dir="rtl">
                     <h1 className="text-xl font-bold text-black dark:text-white">הוספת שאלה</h1>
-                    <Link
-                        href="/"
-                        className="text-sm text-gray-500 hover:text-black dark:hover:text-white transition-colors"
-                    >
-                        {isEnglish ? 'Back to Dashboard' : 'חזרה למסך הראשי'}
-                    </Link>
+                    <div className="flex items-center gap-4">
+                        <Link
+                            href="/"
+                            className="text-sm text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                        >
+                            {isEnglish ? 'Back to Dashboard' : 'חזרה למסך הראשי'}
+                        </Link>
+                    </div>
                 </div>
             </header>
 
@@ -288,8 +375,10 @@ export default function SubmitPage() {
                     <QuestionMetadata
                         category={formData.category}
                         subcategory={formData.subcategory}
+                        topic={formData.topic}
                         onCategoryChange={handleCategoryChange}
                         onMetadataChange={handleMetadataChange}
+                        onSubcategoryChange={handleSubcategoryChange}
                         questionCount={formData.questions.length}
                         onSliderChange={handleSliderChange}
                         isQuestionSet={isQuestionSet}
@@ -348,17 +437,26 @@ export default function SubmitPage() {
                     <div className="flex justify-center sm:justify-start pt-8 border-t border-gray-200 dark:border-gray-800">
                         <button
                             type="submit"
-                            disabled={!isSubCategorySelected || isSubmitting}
+                            disabled={!isSubCategorySelected || loading}
                             className="w-full sm:w-auto bg-[#4169E1] text-white px-12 py-4 rounded-lg font-semibold hover:bg-blue-600 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-lg shadow-blue-500/20"
                         >
-                            {isSubmitting
-                                ? (isEnglish ? 'Submitting...' : 'שולח...')
-                                : (isEnglish ? 'Submit Question(s)' : 'שמור שאלה')
+                            {loading
+                                ? (isEnglish ? 'Processing...' : 'מעבד...')
+                                : (isEnglish ? 'Preview & Submit' : 'תצוגה מקדימה ושליחה')
                             }
                         </button>
                     </div>
                 </form>
             </main>
+            {/* Preview Modal */}
+            <PreviewModal
+                isOpen={isPreviewOpen}
+                onClose={() => setIsPreviewOpen(false)}
+                onConfirm={handleConfirmSubmit}
+                formData={formData}
+                isEnglish={isEnglish}
+                isSubmitting={loading}
+            />
         </div>
     );
 }
