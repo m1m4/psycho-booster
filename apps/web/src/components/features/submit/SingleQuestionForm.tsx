@@ -35,6 +35,8 @@ export function SingleQuestionForm({
     handleImageChange,
     labels
 }: SingleQuestionFormProps) {
+    if (!question) return null;
+
     return (
         <div
             id="question-form-container"
@@ -71,13 +73,12 @@ export function SingleQuestionForm({
                 value={question.questionText}
                 onChange={(e) => handleQuestionChange('questionText', e.target.value)}
                 placeholder={isEnglish ? 'Type question here...' : 'הקלד את השאלה כאן...'}
-                required
                 dir={isEnglish ? 'ltr' : undefined}
                 disabled={!isSubCategorySelected}
                 error={formErrors[`q${activeQuestionIndex}-text`] ? ' ' : undefined}
             />
             {showLatex && (
-                <LatexPreview content={question.questionText} />
+                <LatexPreview content={question.questionText} isEnglish={isEnglish} />
             )}
 
             {!isQuestionSet && (
@@ -150,12 +151,11 @@ export function SingleQuestionForm({
                     value={question.explanation}
                     onChange={(e) => handleQuestionChange('explanation', e.target.value)}
                     placeholder={isEnglish ? 'Explain why the correct answer is correct...' : 'הסבר מדוע התשובה הנכונה היא נכונה...'}
-                    required
                     dir={isEnglish ? 'ltr' : 'rtl'}
                     disabled={!isSubCategorySelected}
                     error={formErrors[`q${activeQuestionIndex}-explanation`] ? ' ' : undefined}
                 />
-                {showLatex && <LatexPreview content={question.explanation} />}
+                {showLatex && <LatexPreview content={question.explanation} isEnglish={isEnglish} />}
             </div>
         </div>
     );

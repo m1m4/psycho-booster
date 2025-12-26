@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { QuestionPreview } from './QuestionPreview';
+import { Preview } from './Preview';
 import { QuestionItem } from '@/types/submit';
 
-interface QuestionPreviewModalProps {
+interface PreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
@@ -18,7 +18,13 @@ interface QuestionPreviewModalProps {
     isSubmitting: boolean;
 }
 
-export function QuestionPreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, isSubmitting }: QuestionPreviewModalProps) {
+export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, isSubmitting }: PreviewModalProps) {
+    const isAssetRequiredSubcategory =
+        formData.subcategory === 'chart_inference' ||
+        formData.subcategory === 'reading_comprehension_verbal' ||
+        formData.subcategory === 'reading_comprehension_eng';
+
+    const isQuestionSet = formData.questions.length > 1 || (!!formData.assetText && isAssetRequiredSubcategory) || (!!formData.assetFile && isAssetRequiredSubcategory);
 
     // Lock body scroll when modal is open
     useEffect(() => {
@@ -39,12 +45,17 @@ export function QuestionPreviewModal({ isOpen, onClose, onConfirm, formData, isE
 
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity"
                 onClick={onClose}
             />
 
             {/* Modal Content */}
-            <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-black rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-200">
+            <div className={`
+                relative w-fit min-w-[min(90vw,480px)] max-w-6xl max-h-[92vh] mx-auto
+                ${isQuestionSet ? 'min-h-[750px]' : 'min-h-[500px]'}
+                bg-white dark:bg-black rounded-3xl shadow-2xl flex flex-col overflow-hidden 
+                border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-300
+            `}>
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
@@ -67,8 +78,8 @@ export function QuestionPreviewModal({ isOpen, onClose, onConfirm, formData, isE
                 </div>
 
                 {/* Scrollable Body */}
-                <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
-                    <QuestionPreview formData={formData} isEnglish={isEnglish} />
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+                    <Preview formData={formData} isEnglish={isEnglish} />
                 </div>
 
                 {/* Footer Actions */}
