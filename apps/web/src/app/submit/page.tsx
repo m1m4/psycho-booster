@@ -7,7 +7,7 @@ import { QuestionMetadata } from '@/components/features/submit/QuestionMetadata'
 import { SharedAsset } from '@/components/features/submit/SharedAsset';
 import { QuestionTabs } from '@/components/features/submit/QuestionTabs';
 import { SingleQuestionForm } from '@/components/features/submit/SingleQuestionForm';
-import { QuestionPreviewModal } from '@/components/features/submit/QuestionPreviewModal';
+import { PreviewModal } from '@/components/features/submit/PreviewModal';
 import { uploadFile } from '@/lib/firebase/upload';
 import { saveQuestionSet } from '@/lib/firebase/db';
 
@@ -66,11 +66,21 @@ export default function SubmitPage() {
     };
 
     const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setFormData(prev => ({ ...prev, category: e.target.value, subcategory: '', topic: '' }));
+        const value = e.target.value;
+        setFormData(prev => ({
+            ...prev,
+            category: value,
+            subcategory: '',
+            topic: '',
+            // Clear questions and reset to default to avoid carryover logic issues
+            questions: [DEFAULT_QUESTION]
+        }));
+        setActiveQuestionIndex(0);
     };
 
     const handleSubcategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setFormData(prev => ({ ...prev, subcategory: e.target.value, topic: '' }));
+        setActiveQuestionIndex(0);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,44 +206,11 @@ export default function SubmitPage() {
 
             setTimeout(() => {
                 setFormErrors({});
-            }, 1000);
+            }, 3000);
 
             return false;
         }
         return true;
-    };
-
-    const handleGenerateMockData = () => {
-        const mockData = {
-            category: 'quantitative',
-            subcategory: 'algebra',
-            topic: 'equations',
-            assetFile: null,
-            assetText: 'נתונה המשוואה הבאה המתייחסת ל-**ערך מוחלט** ו-**חזקות**:',
-            questions: [
-                {
-                    id: 1,
-                    questionText: 'מצא את ערכו של $x$ במשוואה הבאה: $x^2 + 5 = **21**$',
-                    questionImage: null,
-                    answer1: '$x = 4$',
-                    answer1Image: null,
-                    answer2: '$x = -4$',
-                    answer2Image: null,
-                    answer3: '$x = \pm 4$',
-                    answer3Image: null,
-                    answer4: '$x = \sqrt{16}$',
-                    answer4Image: null,
-                    correctAnswer: '3',
-                    explanation: 'נעביר אגפים: $x^2 = 21 - 5 = 16$. לכן $x = \pm \sqrt{16} = **\pm 4**$.',
-                    difficulty: 'medium',
-                }
-            ],
-        };
-
-        setFormData(mockData);
-        setActiveQuestionIndex(0);
-        setSubmissionId(Date.now().toString());
-        setIsPreviewOpen(true);
     };
 
     const handleConfirmSubmit = async () => {
@@ -383,20 +360,6 @@ export default function SubmitPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between" dir="rtl">
                     <h1 className="text-xl font-bold text-black dark:text-white">הוספת שאלה</h1>
                     <div className="flex items-center gap-4">
-                        <button
-                            type="button"
-                            onClick={handleGenerateMockData}
-                            className="text-sm font-medium text-[#4169E1] hover:text-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg transition-colors border border-blue-100 dark:border-blue-900/30"
-                        >
-                            מילוי אלגברה
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleGenerateChartMockData}
-                            className="text-sm font-medium text-purple-600 hover:text-purple-700 bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 rounded-lg transition-colors border border-purple-100 dark:border-purple-900/30"
-                        >
-                            מילוי תרשים
-                        </button>
                         <Link
                             href="/"
                             className="text-sm text-gray-500 hover:text-black dark:hover:text-white transition-colors"
@@ -486,7 +449,7 @@ export default function SubmitPage() {
                 </form>
             </main>
             {/* Preview Modal */}
-            <QuestionPreviewModal
+            <PreviewModal
                 isOpen={isPreviewOpen}
                 onClose={() => setIsPreviewOpen(false)}
                 onConfirm={handleConfirmSubmit}

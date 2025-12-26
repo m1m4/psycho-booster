@@ -65,7 +65,6 @@ export function AnswersList({
                                                 placeholder={`${labels.answerPlaceholder} ${num}`}
                                                 value={answerValue}
                                                 onChange={(e) => handleQuestionChange(answerKey, e.target.value)}
-                                                required
                                                 singleLine={true}
                                                 minHeight="46px"
                                                 className={`transition-all ${hasSelection
@@ -134,6 +133,7 @@ export function AnswersList({
                                         <LatexPreview
                                             content={answerValue}
                                             label={isEnglish ? `Preview Answer ${num}` : `תצוגה מקדימה לתשובה ${num}`}
+                                            isEnglish={isEnglish}
                                         />
                                     </div>
                                 )}

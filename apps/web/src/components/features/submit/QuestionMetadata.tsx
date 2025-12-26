@@ -50,7 +50,6 @@ export function QuestionMetadata({
                         { label: 'מילולי', value: 'verbal' },
                         { label: 'אנגלית', value: 'english' },
                     ]}
-                    required
                     error={errors['category-select'] ? ' ' : undefined}
                 />
                 <Select
@@ -60,8 +59,11 @@ export function QuestionMetadata({
                     value={subcategory}
                     onChange={onSubcategoryChange}
                     placeholder={isEnglish ? 'Select Subcategory...' : 'בחר תת-קטגוריה...'}
-                    options={category ? SUBCATEGORY_OPTIONS[category as keyof typeof SUBCATEGORY_OPTIONS] || [] : []}
-                    required
+                    options={
+                        (category && category in SUBCATEGORY_OPTIONS)
+                            ? SUBCATEGORY_OPTIONS[category as keyof typeof SUBCATEGORY_OPTIONS]
+                            : []
+                    }
                     disabled={!category}
                     dir={isEnglish ? 'ltr' : 'rtl'}
                     error={errors['subcategory-select'] ? ' ' : undefined}
@@ -78,7 +80,6 @@ export function QuestionMetadata({
                         onChange={onMetadataChange}
                         placeholder="בחר נושא..."
                         options={TOPIC_OPTIONS[subcategory] || []}
-                        required
                         disabled={!subcategory}
                         error={errors['topic-select'] ? ' ' : undefined}
                     />
