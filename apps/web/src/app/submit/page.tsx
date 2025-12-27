@@ -10,9 +10,11 @@ import { SingleQuestionForm } from '@/components/features/submit/SingleQuestionF
 import { PreviewModal } from '@/components/features/submit/PreviewModal';
 import { uploadFile } from '@/lib/firebase/upload';
 import { saveQuestionSet } from '@/lib/firebase/db';
+import { useQueryClient } from '@tanstack/react-query';
 
 
 export default function SubmitPage() {
+    const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
     const [submissionId, setSubmissionId] = useState<string>('');
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -263,20 +265,29 @@ export default function SubmitPage() {
                 };
             }));
 
+            // Calculate overall difficulty (use first question's difficulty or 'medium' as fallback)
+            const overallDifficulty = processedQuestions.length > 0 ? processedQuestions[0].difficulty : 'medium';
+
             const finalData = {
-                id: parseInt(submissionId),
                 category: formData.category,
                 subcategory: formData.subcategory,
                 topic: formData.topic,
+                difficulty: overallDifficulty,
                 assetText: formData.assetText,
                 assetImageUrl: assetImageUrl || null,
                 questions: processedQuestions,
+                author: 'unknown', // Default author
+                status: 'pending' as const, // Initial status
             };
 
-            await saveQuestionSet(submissionId, finalData);
+            const newId = await saveQuestionSet(finalData);
 
-            console.log('Form Submitted to Firebase', finalData);
-            alert(`Question set submitted successfully! ID: ${submissionId}`);
+            // Invalidate queries to refresh stats and table
+            queryClient.invalidateQueries({ queryKey: ['statistics'] });
+            queryClient.invalidateQueries({ queryKey: ['questions'] });
+
+            console.log('Form Submitted to Firebase', { ...finalData, id: newId });
+            alert(`Question set submitted successfully! ID: ${newId}`);
 
             // Reset Form and generate new IDs
             setFormData({
@@ -356,20 +367,6 @@ export default function SubmitPage() {
 
     return (
         <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
-            <header className="sticky top-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between" dir="rtl">
-                    <h1 className="text-xl font-bold text-black dark:text-white">הוספת שאלה</h1>
-                    <div className="flex items-center gap-4">
-                        <Link
-                            href="/"
-                            className="text-sm text-gray-500 hover:text-black dark:hover:text-white transition-colors"
-                        >
-                            {isEnglish ? 'Back to Dashboard' : 'חזרה למסך הראשי'}
-                        </Link>
-                    </div>
-                </div>
-            </header>
-
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
                 <form onSubmit={handleSubmit} className="space-y-8" dir="rtl">
                     <QuestionMetadata

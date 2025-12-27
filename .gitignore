@@ -12,6 +12,7 @@ node_modules/
 coverage/
 .nyc_output/
 *.lcov
+infra/workflows-backup/
 
 # Next.js
 .next/

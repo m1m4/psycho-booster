@@ -96,3 +96,37 @@ export const TOPIC_OPTIONS: Record<string, { label: string; value: string }[]> =
         { label: 'מערכת צירים', value: 'coord_system' },
     ],
 };
+
+export interface SavedQuestionItem extends Omit<QuestionItem, 'questionImage' | 'answer1Image' | 'answer2Image' | 'answer3Image' | 'answer4Image'> {
+    questionImageUrl: string | null;
+    answer1ImageUrl: string | null;
+    answer2ImageUrl: string | null;
+    answer3ImageUrl: string | null;
+    answer4ImageUrl: string | null;
+}
+
+export interface QuestionSet {
+    id: string; // Auto-generated ID
+    category: string;
+    subcategory: string;
+    topic?: string;
+    difficulty: string; // Added for sorting
+    assetText?: string;
+    assetImageUrl?: string | null;
+    questions: SavedQuestionItem[]; // Using SavedQuestionItem
+    author: string;
+    status: 'pending' | 'initial' | 'approved';
+    createdAt?: any; // Firestore Timestamp
+}
+
+
+export interface QuestionFilters {
+    startDate?: Date | null;
+    endDate?: Date | null;
+    timeRange?: 'all' | 'today' | 'lastWeek' | 'lastMonth'; // UI helper
+    creator?: string;
+    status?: string;
+    category?: string;
+    subcategory?: string;
+    difficulty?: string;
+}

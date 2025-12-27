@@ -6,13 +6,6 @@ import { ActionCard } from '@/components/features/home/ActionCard';
 export default function Home() {
     return (
         <div className="min-h-screen bg-white dark:bg-black" dir="rtl">
-            <header className="sticky top-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-black dark:text-white">Psycho Booster</h1>
-                    <p className="text-sm text-gray-500 font-medium">פאנל ניהול</p>
-                </div>
-            </header>
-
             <main className="flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
                 <div className="w-full max-w-3xl mx-auto space-y-16">
                     <div className="text-center space-y-3">

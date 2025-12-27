@@ -16,5 +16,8 @@
       "npm ci --prefix apps/web",
       "npm run build --prefix apps/web"
     ]
+  },
+  "firestore": {
+    "indexes": "firestore.indexes.json"
   }
 }

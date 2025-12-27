@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Preview } from './Preview';
-import { QuestionItem } from '@/types/submit';
+import { QuestionItem, SavedQuestionItem } from '@/types/submit';
 
 interface PreviewModalProps {
     isOpen: boolean;
@@ -10,21 +10,23 @@ interface PreviewModalProps {
         category: string;
         subcategory: string;
         topic?: string;
-        assetFile: File | null;
+        assetFile?: File | null;
+        assetImageUrl?: string | null;
         assetText: string;
-        questions: QuestionItem[];
+        questions: (QuestionItem | SavedQuestionItem)[];
     };
     isEnglish: boolean;
-    isSubmitting: boolean;
+    isSubmitting?: boolean;
+    readOnly?: boolean;
 }
 
-export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, isSubmitting }: PreviewModalProps) {
+export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, isSubmitting = false, readOnly = false }: PreviewModalProps) {
     const isAssetRequiredSubcategory =
         formData.subcategory === 'chart_inference' ||
         formData.subcategory === 'reading_comprehension_verbal' ||
         formData.subcategory === 'reading_comprehension_eng';
 
-    const isQuestionSet = formData.questions.length > 1 || (!!formData.assetText && isAssetRequiredSubcategory) || (!!formData.assetFile && isAssetRequiredSubcategory);
+    const isQuestionSet = formData.questions.length > 1 || (!!formData.assetText && isAssetRequiredSubcategory) || ((!!formData.assetFile || !!formData.assetImageUrl) && isAssetRequiredSubcategory);
 
     // Lock body scroll when modal is open
     useEffect(() => {
@@ -61,7 +63,7 @@ export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, 
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            {isEnglish ? 'Preview Question' : 'תצוגה מקדימה'}
+                            {readOnly ? (isEnglish ? 'Question Details' : 'פרטי שאלה') : (isEnglish ? 'Preview Question' : 'תצוגה מקדימה')}
                         </h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             {isEnglish ? 'Please review the details before submitting' : 'אנא וודא שכל הפרטים נכונים לפני השליחה'}
@@ -84,33 +86,35 @@ export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, 
 
                 {/* Footer Actions */}
                 <div className="p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                    <button
-                        onClick={onConfirm}
-                        disabled={isSubmitting}
-                        className="w-full sm:w-auto px-8 py-3 rounded-xl bg-[#4169E1] text-white font-bold hover:bg-blue-600 active:scale-95 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isSubmitting ? (
-                            <>
-                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                {isEnglish ? 'Submitting...' : 'שולח...'}
-                            </>
-                        ) : (
-                            <>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                {isEnglish ? 'Confirm & Submit' : 'אישור ושליחה'}
-                            </>
-                        )}
-                    </button>
+                    {!readOnly && (
+                        <button
+                            onClick={onConfirm}
+                            disabled={isSubmitting}
+                            className="w-full sm:w-auto px-8 py-3 rounded-xl bg-[#4169E1] text-white font-bold hover:bg-blue-600 active:scale-95 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    {isEnglish ? 'Submitting...' : 'שולח...'}
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    {isEnglish ? 'Confirm & Submit' : 'אישור ושליחה'}
+                                </>
+                            )}
+                        </button>
+                    )}
                     <button
                         onClick={onClose}
-                        className="w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        className={`w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${readOnly ? 'w-full text-center' : ''}`}
                     >
-                        {isEnglish ? 'Back to Edit' : 'חזרה לעריכה'}
+                        {readOnly ? (isEnglish ? 'Close' : 'סגירה') : (isEnglish ? 'Back to Edit' : 'חזרה לעריכה')}
                     </button>
                 </div>
             </div>

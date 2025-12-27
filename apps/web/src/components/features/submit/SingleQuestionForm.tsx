@@ -54,9 +54,9 @@ export function SingleQuestionForm({
                     <Select
                         id={`q${activeQuestionIndex}-difficulty`}
                         options={[
-                            { label: 'קל', value: 'easy' },
+                            { label: 'נמוך', value: 'easy' },
                             { label: 'בינוני', value: 'medium' },
-                            { label: 'קשה', value: 'hard' },
+                            { label: 'גבוה', value: 'hard' },
                         ]}
                         placeholder="רמה..."
                         value={question.difficulty}
