@@ -9,12 +9,14 @@ import {
     onAuthStateChanged,
     signInWithEmailAndPassword
 } from "firebase/auth";
-import { auth } from "../firebase/config";
+import { auth, db } from "../firebase/config";
 import { useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
+    isAuthorized: boolean;
     signInWithGoogle: () => Promise<void>;
     logout: () => Promise<void>;
 }
@@ -23,6 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const [isAuthorized, setIsAuthorized] = useState(false);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
@@ -51,8 +54,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 });
         }
 
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser && currentUser.email) {
+                try {
+                    // Force a check against the database. 
+                    // If the user isn't an admin, Firestore Rules will throw an error here.
+                    const adminDoc = await getDoc(doc(db, "admin_users", currentUser.email));
+                    if (adminDoc.exists()) {
+                        setIsAuthorized(true);
+                        setUser(currentUser);
+                    } else {
+                        console.error("User document does not exist in admin_users");
+                        setIsAuthorized(false);
+                        setUser(currentUser); // Still set user so we know who they are, but isAuthorized is false
+                    }
+                } catch (error) {
+                    console.error("Authorization check failed:", error);
+                    setIsAuthorized(false);
+                    setUser(currentUser);
+                }
+            } else {
+                setUser(null);
+                setIsAuthorized(false);
+            }
             setLoading(false);
         });
 
@@ -72,6 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = async () => {
         try {
             await signOut(auth);
+            setUser(null);
+            setIsAuthorized(false);
             router.push("/login");
         } catch (error) {
             console.error("Error signing out", error);
@@ -79,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, signInWithGoogle, logout }}>
+        <AuthContext.Provider value={{ user, loading, isAuthorized, signInWithGoogle, logout }}>
             {children}
         </AuthContext.Provider>
     );
