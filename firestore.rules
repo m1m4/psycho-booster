@@ -1,0 +1,20 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Function to check if the user is an admin
+    function isAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/admin_users/$(request.auth.token.email));
+    }
+
+    // Allow read/write access to all documents only for admins
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Explicitly allow reading the admin_users collection so we can check it? 
+    // Actually, the `exists` function works without read access if it's in the rules.
+    // BUT the frontend might need to know.
+    // Let's keep it simple: specific match for admin_users if needed, but the catch-all above covers it for admins.
+  }
+}
