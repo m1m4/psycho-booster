@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "export": "next build",
+    "export": "next build --webpack",
     "deploy": "npm run export && cd ../.. && firebase deploy --only hosting"
   },
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@tanstack/react-query": "^5.90.12",
     "expo": "^54.0.30",
     "firebase": "^12.7.0",

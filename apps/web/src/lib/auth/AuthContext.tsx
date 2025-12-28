@@ -4,10 +4,13 @@ import { createContext, useContext, useEffect, useState, useRef } from "react";
 import {
     User,
     GoogleAuthProvider,
-    signInWithPopup,
+    signInWithRedirect,
     signOut,
     onAuthStateChanged,
-    signInWithEmailAndPassword
+    signInWithEmailAndPassword,
+    getRedirectResult,
+    setPersistence,
+    browserLocalPersistence
 } from "firebase/auth";
 import { auth, db } from "../firebase/config";
 import { useRouter } from "next/navigation";
@@ -45,14 +48,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ) {
             autoLoginAttempted.current = true;
             console.log("Attempting Dev Auto-Login...");
-            signInWithEmailAndPassword(auth, devEmail, devPassword)
+            setPersistence(auth, browserLocalPersistence)
+                .then(() => signInWithEmailAndPassword(auth, devEmail, devPassword))
                 .catch((error) => {
-                    // Ignore "already signed in" or similar conflict errors during dev auto-login
                     if (error.code !== 'auth/instance-id-abi-mismatch') {
                         console.error("Auto-login failed:", error);
                     }
                 });
         }
+
+        // Handle the result of a redirect sign-in
+        getRedirectResult(auth)
+            .then((result) => {
+                if (result) {
+                    console.log("Redirect sign-in successful", result.user.email);
+                }
+            })
+            .catch((error) => {
+                console.error("Redirect sign-in error:", error);
+                // On mobile, sometimes an alert is the only way to see the error
+                if (process.env.NODE_ENV !== 'production') {
+                    alert("Sign-in error: " + error.message);
+                }
+            });
 
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser && currentUser.email) {
@@ -84,12 +102,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const signInWithGoogle = async () => {
+        console.log("signInWithGoogle started");
         const provider = new GoogleAuthProvider();
         try {
-            await signInWithPopup(auth, provider);
-            router.push("/");
-        } catch (error) {
+            // Ensure persistence is set to LOCAL for PWAs
+            await setPersistence(auth, browserLocalPersistence);
+            console.log("Persistence set, starting redirect...");
+            await signInWithRedirect(auth, provider);
+        } catch (error: any) {
             console.error("Error signing in with Google", error);
+            alert("Login failed: " + error.message);
         }
     };
 
