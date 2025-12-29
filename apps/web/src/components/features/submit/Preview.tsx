@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { QuestionItem, SavedQuestionItem, SUBCATEGORY_OPTIONS, TOPIC_OPTIONS } from '@/types/submit';
 import { LatexPreview } from '@/components/ui/LatexPreview';
 import { ImageLightbox } from '@/components/ui/ImageLightbox';
-import { useMemo } from 'react';
 
-export const hasHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
+/**
+ * Helper to detect if a string contains Hebrew characters.
+ */
+export const hasHebrew = (text: string): boolean => /[\u0590-\u05FF]/.test(text || '');
 
 /**
  * Hook to calculate responsive font size based on text length.
@@ -33,8 +35,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
     quantitative: 'כמותי',
     english: 'אנגלית'
 };
-
-
 
 interface PreviewProps {
     formData: {
@@ -322,6 +322,3 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
         </div>
     );
 }
-
-
-
