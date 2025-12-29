@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getStatistics } from '@/lib/firebase/db';
-import { CATEGORY_LABELS } from '@/components/features/submit/Preview';
+import { CATEGORY_LABELS } from '@/components/features/submit/QuestionPreview';
 import { SUBCATEGORY_OPTIONS, TOPIC_OPTIONS } from '@/types/submit';
 
 
@@ -57,8 +57,8 @@ export function StatisticsPanel({ onStatusClick, activeStatus }: StatisticsPanel
                             key={status}
                             onClick={() => onStatusClick?.(status)}
                             className={`w-full flex justify-between text-sm p-1.5 rounded-md transition-all cursor-pointer group border ${activeStatus === status
-                                    ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 ring-1 ring-blue-500/20'
-                                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-transparent'
+                                ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 ring-1 ring-blue-500/20'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-transparent'
                                 }`}
                             title={`סינון לפי ${statusLabels[status].label}`}
                         >

@@ -43,14 +43,7 @@ function SubmitPageContent() {
                     <h1 className="text-3xl font-bold">
                         {editId ? 'עריכת שאלה' : 'הוספת שאלה חדשה'}
                     </h1>
-                    <div className="flex gap-4">
-                        <button
-                            onClick={() => router.push('/submit/inbox')}
-                            className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                        >
-                            תיבת דואר (שעורי בית)
-                        </button>
-                    </div>
+
                 </div>
 
                 <div className="min-h-[500px]">

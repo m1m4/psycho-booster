@@ -12,6 +12,7 @@ export function Navbar() {
     const navItems = [
         { label: 'בית', href: '/' },
         { label: 'הוספה', href: '/submit' },
+        { label: 'אוטומציה', href: '/automation' },
         { label: 'צפייה', href: '/viewer' },
         { label: 'פיתוח', href: '/dev' },
     ];
