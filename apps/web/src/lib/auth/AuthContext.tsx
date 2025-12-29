@@ -4,11 +4,10 @@ import { createContext, useContext, useEffect, useState, useRef } from "react";
 import {
     User,
     GoogleAuthProvider,
-    signInWithRedirect,
+    signInWithPopup,
     signOut,
     onAuthStateChanged,
     signInWithEmailAndPassword,
-    getRedirectResult,
     setPersistence,
     browserLocalPersistence
 } from "firebase/auth";
@@ -32,12 +31,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    const autoLoginAttempted = useRef(false);
+    const mountedRef = useRef(false);
 
     useEffect(() => {
-        console.log("AuthProvider: Initializing...");
+        mountedRef.current = true;
+        console.log("AuthProvider: Mounted");
 
-        // Dev Mode Auto-Login
+        // 1. Dev Auto-Login (Safe check)
         const devEmail = process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN_EMAIL;
         const devPassword = process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN_PASSWORD;
 
@@ -45,82 +45,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             process.env.NODE_ENV === "development" &&
             devEmail &&
             devPassword &&
-            !auth.currentUser &&
-            !autoLoginAttempted.current
+            !auth.currentUser
         ) {
-            autoLoginAttempted.current = true;
-            console.log("AuthProvider: Attempting Dev Auto-Login...");
-            setPersistence(auth, browserLocalPersistence)
-                .then(() => signInWithEmailAndPassword(auth, devEmail, devPassword))
-                .catch((error) => {
-                    if (error.code !== 'auth/instance-id-abi-mismatch') {
-                        console.error("AuthProvider: Auto-login failed:", error);
-                    }
-                });
+            // Check if we already tried this session (simple obscure flag on window to avoid hooks issues in strict mode)
+            if (!(window as any).__dev_auto_login_attempted) {
+                (window as any).__dev_auto_login_attempted = true;
+                console.log("AuthProvider: Attempting Dev Auto-Login...");
+                signInWithEmailAndPassword(auth, devEmail, devPassword).catch((e) => console.error("Dev login failed", e));
+            }
         }
 
-        // Initialize session handling
-        const init = async () => {
-            try {
-                // Ensure persistence is set for the session
-                await setPersistence(auth, browserLocalPersistence);
+        // 2. Main Auth Listener
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (!mountedRef.current) return;
 
-                // Prioritize processing the redirect result
-                const result = await getRedirectResult(auth);
-                if (result) {
-                    console.log("AuthProvider: Redirect login success", result.user.email);
-                }
-            } catch (error) {
-                console.error("AuthProvider: Init/Redirect error:", error);
-            }
+            console.log("AuthProvider: Auth state changed:", currentUser?.email);
 
-            // Start observing auth state changes
-            const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-                console.log("AuthProvider: onAuthStateChanged", currentUser?.email || "null");
+            if (currentUser && currentUser.email) {
+                // Determine Authorization
+                let authorized = false;
 
-                if (currentUser && currentUser.email) {
-                    try {
-                        // Dev Mode Bypass
-                        if (process.env.NODE_ENV === "development" &&
-                            currentUser.email === process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN_EMAIL) {
-                            console.log("AuthProvider: Dev user authorized");
-                            setIsAuthorized(true);
-                            setUser(currentUser);
-                            setLoading(false);
-                            return;
-                        }
-
-                        // Check authorization
-                        const adminDoc = await getDoc(doc(db, "admin_users", currentUser.email));
-                        if (adminDoc.exists()) {
-                            console.log("AuthProvider: User authorized via Firestore");
-                            setIsAuthorized(true);
-                            setUser(currentUser);
-                        } else {
-                            console.warn("AuthProvider: User not in admin_users list");
-                            setIsAuthorized(false);
-                            setUser(currentUser);
-                        }
-                    } catch (error) {
-                        console.error("AuthProvider: Authorization check failed", error);
-                        setIsAuthorized(false);
-                        setUser(currentUser);
-                    }
+                // Dev Bypass
+                if (process.env.NODE_ENV === "development" &&
+                    currentUser.email === process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN_EMAIL) {
+                    authorized = true;
                 } else {
+                    try {
+                        const adminDoc = await getDoc(doc(db, "admin_users", currentUser.email));
+                        authorized = adminDoc.exists();
+                    } catch (e) {
+                        console.error("AuthProvider: Admin check error", e);
+                        // If network fails, we might still want to let them be 'logged in' but maybe not authorized?
+                        // For now, keep as false.
+                    }
+                }
+
+                if (mountedRef.current) {
+                    setUser(currentUser);
+                    setIsAuthorized(authorized);
+                }
+            } else {
+                if (mountedRef.current) {
                     setUser(null);
                     setIsAuthorized(false);
                 }
+            }
 
-                // Only mark as finished loading AFTER we've checked everything
+            if (mountedRef.current) {
                 setLoading(false);
-            });
+            }
+        });
 
-            return unsubscribe;
-        };
-
-        const unsubPromise = init();
         return () => {
-            unsubPromise.then(unsub => unsub?.());
+            mountedRef.current = false;
+            unsubscribe();
         };
     }, []);
 
@@ -130,11 +108,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             // Ensure persistence is set to LOCAL for PWAs
             await setPersistence(auth, browserLocalPersistence);
-            console.log("Persistence set, starting redirect...");
-            await signInWithRedirect(auth, provider);
+            console.log("Persistence set, starting popup...");
+            await signInWithPopup(auth, provider);
+            // Result handling is done in onAuthStateChanged
         } catch (error: any) {
             console.error("Error signing in with Google", error);
-            alert("Login failed: " + error.message);
+            if (error.code === 'auth/popup-blocked') {
+                alert("Login popup was blocked. Please allow popups for this site.");
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                console.log("Popup closed by user");
+            } else {
+                alert("Login failed: " + error.message);
+            }
         }
     };
 

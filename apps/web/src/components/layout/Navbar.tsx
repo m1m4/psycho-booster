@@ -3,9 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 export function Navbar() {
     const pathname = usePathname();
+    const { user } = useAuth();
 
     const navItems = [
         { label: 'בית', href: '/' },
@@ -22,20 +24,22 @@ export function Navbar() {
                         Psycho Booster
                     </Link>
 
-                    <nav className="hidden md:flex items-center gap-1">
-                        {navItems.map((item) => (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${pathname === item.href
+                    {user && (
+                        <nav className="hidden md:flex items-center gap-1">
+                            {navItems.map((item) => (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${pathname === item.href
                                         ? 'bg-gray-100 dark:bg-gray-800 text-blue-600 dark:text-blue-400'
                                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-gray-200'
-                                    }`}
-                            >
-                                {item.label}
-                            </Link>
-                        ))}
-                    </nav>
+                                        }`}
+                                >
+                                    {item.label}
+                                </Link>
+                            ))}
+                        </nav>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-4">

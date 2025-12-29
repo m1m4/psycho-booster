@@ -26,8 +26,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         );
     }
 
+    // Allow access to login page
+    if (pathname === "/login") {
+        return <>{children}</>;
+    }
+
     // If not loading, no user, and not on the login page, don't render anything while redirecting
-    if (!user && pathname !== "/login") {
+    if (!user) {
         return null;
     }
 
