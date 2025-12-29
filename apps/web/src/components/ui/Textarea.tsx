@@ -63,10 +63,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>**$1**</strong>')
+                // Removed automatic bold highlighting for **text**
                 .replace(/(\$\$?)([^\$]+?)(\$\$?)/g, (match, d1, content, d2) => {
-                    // Wrap LaTeX math in LTR span to prevent BiDi reordering of delimiters
-                    return `<span dir="ltr" style="unicode-bidi: isolate; display: inline-block;">${d1}${content}${d2}</span>`;
+                    // Wrap LaTeX math in a span without forcing flow/display changes to keep cursor aligned
+                    return `<span>${d1}${content}${d2}</span>`;
                 })
                 .replace(/\n/g, '<br/>');
         };
@@ -186,15 +186,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 {error && <p className="text-sm text-red-500">{error}</p>}
 
                 <style jsx>{`
-                    strong {
-                        /* Make bold text verify visible with extra weight */
-                        font-weight: 900;
-                        color: inherit;
-                        /* Use a very subtle text-stroke for bolding to keep character widths identical */
-                        -webkit-text-stroke: 0.8px currentColor;
-                        paint-order: stroke fill;
-                        letter-spacing: -0.2px; /* Tiny adjustment to compensate for stroke-induced width */
-                    }
+                    /* Removed strong styles as bold highlighting is disabled */
                 `}</style>
             </div>
         );

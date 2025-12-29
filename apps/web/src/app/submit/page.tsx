@@ -19,8 +19,8 @@ function SubmitPageContent() {
     });
 
     const handleEditorSuccess = (newId: string) => {
-        // After successful submit/save, go to inbox
-        router.push('/submit/inbox');
+        // Redirect to viewer after success
+        router.push('/viewer');
     };
 
     if (editId && isLoading) {

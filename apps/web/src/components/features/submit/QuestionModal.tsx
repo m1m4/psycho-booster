@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { QuestionPreview } from './QuestionPreview';
 import { QuestionItem, SavedQuestionItem } from '@/types/submit';
+import { useRouter } from 'next/navigation';
 
 interface QuestionModalProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ interface QuestionModalProps {
         assetImageUrl?: string | null;
         assetText: string;
         questions: (QuestionItem | SavedQuestionItem)[];
+        id?: string;
     };
     isEnglish: boolean;
     isSubmitting?: boolean;
@@ -21,6 +23,7 @@ interface QuestionModalProps {
 }
 
 export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish, isSubmitting = false, readOnly = false }: QuestionModalProps) {
+    const router = useRouter();
     const isAssetRequiredSubcategory =
         formData.subcategory === 'chart_inference' ||
         formData.subcategory === 'reading_comprehension_verbal' ||
@@ -88,7 +91,7 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
 
                 {/* Footer Actions */}
                 <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col sm:flex-row gap-3 justify-between items-center">
-                    {!readOnly && (
+                    {!readOnly ? (
                         <button
                             onClick={onConfirm}
                             disabled={isSubmitting}
@@ -111,10 +114,25 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
                                 </>
                             )}
                         </button>
+                    ) : (
+                        formData.id && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    router.push(`/submit?id=${formData.id}`);
+                                }}
+                                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                {isEnglish ? 'Edit Question' : 'עריכת שאלה'}
+                            </button>
+                        )
                     )}
                     <button
                         onClick={onClose}
-                        className={`w-full sm:w-auto px-6 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${readOnly ? 'w-full text-center' : ''}`}
+                        className={`w-full sm:w-auto px-6 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${readOnly ? '' : ''}`}
                     >
                         {readOnly ? (isEnglish ? 'Close' : 'סגירה') : (isEnglish ? 'Back to Edit' : 'חזרה לעריכה')}
                     </button>
