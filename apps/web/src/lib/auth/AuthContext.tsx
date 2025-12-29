@@ -35,6 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const autoLoginAttempted = useRef(false);
 
     useEffect(() => {
+        console.log("AuthProvider: Initializing...");
+
         // Dev Mode Auto-Login
         const devEmail = process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN_EMAIL;
         const devPassword = process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN_PASSWORD;
@@ -47,68 +49,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             !autoLoginAttempted.current
         ) {
             autoLoginAttempted.current = true;
-            console.log("Attempting Dev Auto-Login...");
+            console.log("AuthProvider: Attempting Dev Auto-Login...");
             setPersistence(auth, browserLocalPersistence)
                 .then(() => signInWithEmailAndPassword(auth, devEmail, devPassword))
                 .catch((error) => {
                     if (error.code !== 'auth/instance-id-abi-mismatch') {
-                        console.error("Auto-login failed:", error);
+                        console.error("AuthProvider: Auto-login failed:", error);
                     }
                 });
         }
 
-        // Handle the result of a redirect sign-in
-        getRedirectResult(auth)
-            .then((result) => {
+        // Initialize session handling
+        const init = async () => {
+            try {
+                // Ensure persistence is set for the session
+                await setPersistence(auth, browserLocalPersistence);
+
+                // Prioritize processing the redirect result
+                const result = await getRedirectResult(auth);
                 if (result) {
-                    console.log("Redirect sign-in successful", result.user.email);
+                    console.log("AuthProvider: Redirect login success", result.user.email);
                 }
-            })
-            .catch((error) => {
-                console.error("Redirect sign-in error:", error);
-                // On mobile, sometimes an alert is the only way to see the error
-                if (process.env.NODE_ENV !== 'production') {
-                    alert("Sign-in error: " + error.message);
-                }
-            });
+            } catch (error) {
+                console.error("AuthProvider: Init/Redirect error:", error);
+            }
 
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser && currentUser.email) {
-                try {
-                    // Dev Mode Bypass
-                    if (process.env.NODE_ENV === "development" &&
-                        currentUser.email === process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN_EMAIL) {
-                        console.log("Dev user authorized manually");
-                        setIsAuthorized(true);
-                        setUser(currentUser);
-                        setLoading(false);
-                        return;
-                    }
+            // Start observing auth state changes
+            const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+                console.log("AuthProvider: onAuthStateChanged", currentUser?.email || "null");
 
-                    // Force a check against the database. 
-                    // If the user isn't an admin, Firestore Rules will throw an error here.
-                    const adminDoc = await getDoc(doc(db, "admin_users", currentUser.email));
-                    if (adminDoc.exists()) {
-                        setIsAuthorized(true);
-                        setUser(currentUser);
-                    } else {
-                        console.error("User document does not exist in admin_users");
+                if (currentUser && currentUser.email) {
+                    try {
+                        // Dev Mode Bypass
+                        if (process.env.NODE_ENV === "development" &&
+                            currentUser.email === process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN_EMAIL) {
+                            console.log("AuthProvider: Dev user authorized");
+                            setIsAuthorized(true);
+                            setUser(currentUser);
+                            setLoading(false);
+                            return;
+                        }
+
+                        // Check authorization
+                        const adminDoc = await getDoc(doc(db, "admin_users", currentUser.email));
+                        if (adminDoc.exists()) {
+                            console.log("AuthProvider: User authorized via Firestore");
+                            setIsAuthorized(true);
+                            setUser(currentUser);
+                        } else {
+                            console.warn("AuthProvider: User not in admin_users list");
+                            setIsAuthorized(false);
+                            setUser(currentUser);
+                        }
+                    } catch (error) {
+                        console.error("AuthProvider: Authorization check failed", error);
                         setIsAuthorized(false);
                         setUser(currentUser);
                     }
-                } catch (error) {
-                    console.error("Authorization check failed:", error);
+                } else {
+                    setUser(null);
                     setIsAuthorized(false);
-                    setUser(currentUser);
                 }
-            } else {
-                setUser(null);
-                setIsAuthorized(false);
-            }
-            setLoading(false);
-        });
 
-        return () => unsubscribe();
+                // Only mark as finished loading AFTER we've checked everything
+                setLoading(false);
+            });
+
+            return unsubscribe;
+        };
+
+        const unsubPromise = init();
+        return () => {
+            unsubPromise.then(unsub => unsub?.());
+        };
     }, []);
 
     const signInWithGoogle = async () => {
