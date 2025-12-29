@@ -75,6 +75,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser && currentUser.email) {
                 try {
+                    // Dev Mode Bypass
+                    if (process.env.NODE_ENV === "development" &&
+                        currentUser.email === process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN_EMAIL) {
+                        console.log("Dev user authorized manually");
+                        setIsAuthorized(true);
+                        setUser(currentUser);
+                        setLoading(false);
+                        return;
+                    }
+
                     // Force a check against the database. 
                     // If the user isn't an admin, Firestore Rules will throw an error here.
                     const adminDoc = await getDoc(doc(db, "admin_users", currentUser.email));
@@ -84,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     } else {
                         console.error("User document does not exist in admin_users");
                         setIsAuthorized(false);
-                        setUser(currentUser); // Still set user so we know who they are, but isAuthorized is false
+                        setUser(currentUser);
                     }
                 } catch (error) {
                     console.error("Authorization check failed:", error);

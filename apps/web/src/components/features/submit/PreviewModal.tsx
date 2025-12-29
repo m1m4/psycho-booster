@@ -43,7 +43,7 @@ export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" dir={isEnglish ? 'ltr' : 'rtl'}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6" dir={isEnglish ? 'ltr' : 'rtl'}>
 
             {/* Backdrop */}
             <div
@@ -53,10 +53,12 @@ export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, 
 
             {/* Modal Content */}
             <div className={`
-                relative w-fit min-w-[min(90vw,480px)] max-w-6xl max-h-[92vh] mx-auto
-                ${isQuestionSet ? 'min-h-[750px]' : 'min-h-[500px]'}
-                bg-white dark:bg-black rounded-3xl shadow-2xl flex flex-col overflow-hidden 
-                border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-300
+                relative w-full md:w-fit md:min-w-[min(90vw,480px)] max-w-6xl 
+                h-full md:h-auto md:max-h-[92vh] mx-auto
+                ${isQuestionSet ? 'md:min-h-[750px]' : 'md:min-h-[500px]'}
+                bg-white dark:bg-black md:rounded-3xl shadow-2xl flex flex-col overflow-hidden 
+                border-x-0 border-y-0 md:border md:border-gray-200 md:dark:border-gray-800 
+                overscroll-behavior-contain
             `}>
 
                 {/* Header */}
@@ -85,12 +87,12 @@ export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, 
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col sm:flex-row gap-3 justify-between items-center">
                     {!readOnly && (
                         <button
                             onClick={onConfirm}
                             disabled={isSubmitting}
-                            className="w-full sm:w-auto px-8 py-3 rounded-xl bg-[#4169E1] text-white font-bold hover:bg-blue-600 active:scale-95 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full sm:w-auto px-8 py-2.5 rounded-xl bg-[#4169E1] text-white font-bold hover:bg-blue-600 active:scale-95 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSubmitting ? (
                                 <>
@@ -112,7 +114,7 @@ export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, 
                     )}
                     <button
                         onClick={onClose}
-                        className={`w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${readOnly ? 'w-full text-center' : ''}`}
+                        className={`w-full sm:w-auto px-6 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${readOnly ? 'w-full text-center' : ''}`}
                     >
                         {readOnly ? (isEnglish ? 'Close' : 'סגירה') : (isEnglish ? 'Back to Edit' : 'חזרה לעריכה')}
                     </button>

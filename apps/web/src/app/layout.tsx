@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
@@ -17,17 +17,21 @@ const geistMono = Geist_Mono({
 /**
  * Metadata for the Psycho Booster application.
  */
+export const viewport: Viewport = {
+  themeColor: "#000000",
+};
+
 export const metadata: Metadata = {
   title: "Psycho Booster - פאנל ניהול",
   description: "מערכת לניהול והזנת שאלות פסיכומטרי",
   manifest: "/manifest.json",
-  themeColor: "#000000",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Psycho Booster",
   },
   icons: {
+    icon: "/icon-192.png",
     apple: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
     ],

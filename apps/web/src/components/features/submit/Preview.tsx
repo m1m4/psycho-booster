@@ -4,8 +4,29 @@ import React, { useState } from 'react';
 import { QuestionItem, SavedQuestionItem, SUBCATEGORY_OPTIONS, TOPIC_OPTIONS } from '@/types/submit';
 import { LatexPreview } from '@/components/ui/LatexPreview';
 import { ImageLightbox } from '@/components/ui/ImageLightbox';
+import { useMemo } from 'react';
 
-const hasHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
+export const hasHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
+
+/**
+ * Hook to calculate responsive font size based on text length.
+ * Target: ~50 chars/line roughly.
+ * Logic: 
+ * - Standard size: 1.125rem (text-lg) => approx 18px
+ * - If text is short (< 80 chars), scale UP to 1.5rem (text-2xl)
+ * - If text is long (> 300 chars), scale DOWN to 1rem (text-base) or 0.875rem (text-sm)
+ */
+export const useResponsiveFontSize = (text: string, baseSize = 'text-lg') => {
+    return useMemo(() => {
+        if (!text) return baseSize;
+        const len = text.length;
+        if (len < 45) return 'text-xl leading-relaxed'; // Reduced from 2xl, user requested 45
+        if (len < 120) return 'text-lg leading-relaxed'; // Reduced from xl
+        if (len > 400) return 'text-xs leading-relaxed'; // Reduced from sm
+        if (len > 250) return 'text-sm leading-relaxed'; // Reduced from base
+        return 'text-base leading-relaxed'; // Standard reduced to base
+    }, [text, baseSize]);
+};
 
 export const CATEGORY_LABELS: Record<string, string> = {
     verbal: 'מילולי',
@@ -48,6 +69,23 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
         if (q[fieldPrefx + 'ImageUrl']) return getImageSrc(q[fieldPrefx + 'ImageUrl']);
         return undefined;
     };
+
+    // Calculate generic font sizes for current view
+    const questionFontSize = useResponsiveFontSize(currentQuestion.questionText);
+    const explanationFontSize = useResponsiveFontSize(currentQuestion.explanation);
+
+    // Find longest answer to normalize answer font sizes
+    const longestAnswerLength = useMemo(() => {
+        return Math.max(
+            (currentQuestion.answer1 || '').length,
+            (currentQuestion.answer2 || '').length,
+            (currentQuestion.answer3 || '').length,
+            (currentQuestion.answer4 || '').length
+        );
+    }, [currentQuestion]);
+
+    // Create a dummy text of max length to get the unified class
+    const answersFontSize = useResponsiveFontSize("a".repeat(longestAnswerLength));
 
     const showAssetData = assetFile || assetImageUrl || assetText;
     const isAssetRequiredSubcategory =
@@ -117,9 +155,9 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
                 ))}
             </div>
 
-            {/* Header info - Title Only (Difficulty moved to question frame) */}
-            <div className="border-b border-gray-200 dark:border-gray-800 pb-4 mb-2 w-full">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white whitespace-nowrap">
+            {/* Header info - Title & Difficulty Inline */}
+            <div className="border-b border-gray-200 dark:border-gray-800 pb-2 mb-2 w-full flex items-center justify-between gap-4">
+                <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white whitespace-nowrap truncate">
                     {CATEGORY_LABELS[formData.category] || formData.category} - {
                         Object.values(SUBCATEGORY_OPTIONS)
                             .flat()
@@ -129,6 +167,15 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
                         .find(opt => opt.value === formData.topic)?.label || formData.topic
                         }`}
                 </h2>
+
+                <span className={`
+                    px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0
+                    ${currentQuestion.difficulty === 'easy' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
+                    ${currentQuestion.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
+                    ${currentQuestion.difficulty === 'hard' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : ''}
+                `}>
+                    {currentQuestion.difficulty === 'easy' ? 'נמוך' : currentQuestion.difficulty === 'medium' ? 'בינוני' : currentQuestion.difficulty === 'hard' ? 'גבוה' : currentQuestion.difficulty}
+                </span>
             </div>
 
             {/* Main Content Area - Split Layout for Question Sets */}
@@ -169,33 +216,22 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
                     {/* Unified Question Content */}
                     <div className="space-y-6 w-full">
 
-                        {/* Question Text Frame */}
-                        <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-800 p-6 rounded-2xl w-full">
-                            <div className="flex justify-between items-start gap-8 w-full">
-                                <div
-                                    className={`text-lg font-medium flex-1 text-gray-900 dark:text-white leading-relaxed whitespace-pre-wrap ${isEnglish && !hasHebrew(currentQuestion.questionText) ? 'text-left' : 'text-right'}`}
-                                    dir={isEnglish && !hasHebrew(currentQuestion.questionText) ? 'ltr' : 'rtl'}
-                                >
-                                    <LatexPreview content={currentQuestion.questionText} minimal isEnglish={isEnglish} />
-                                </div>
-                                {/* Difficulty Label - Beside Question */}
-                                <span className={`
-                                    px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0
-                                    ${currentQuestion.difficulty === 'easy' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
-                                    ${currentQuestion.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : ''}
-                                    ${currentQuestion.difficulty === 'hard' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : ''}
-                                `}>
-                                    {currentQuestion.difficulty === 'easy' ? 'נמוך' : currentQuestion.difficulty === 'medium' ? 'בינוני' : currentQuestion.difficulty === 'hard' ? 'גבוה' : currentQuestion.difficulty}
-                                </span>
+                        {/* Question Text Frame - Removed Background/Border */}
+                        <div className="w-full">
+                            <div
+                                className={`${questionFontSize} font-normal text-gray-900 dark:text-white whitespace-pre-wrap ${isEnglish && !hasHebrew(currentQuestion.questionText) ? 'text-left' : 'text-right'}`}
+                                dir={isEnglish && !hasHebrew(currentQuestion.questionText) ? 'ltr' : 'rtl'}
+                            >
+                                <LatexPreview content={currentQuestion.questionText} minimal isEnglish={isEnglish} />
                             </div>
 
                             {/* Question Image */}
                             {getQuestionImage(currentQuestion, 'question') && (
-                                <div className="mt-6 flex justify-center p-4 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-gray-800/50">
+                                <div className="mt-4 flex justify-center">
                                     <img
                                         src={getQuestionImage(currentQuestion, 'question')!}
                                         alt="Question"
-                                        className="max-h-80 h-auto w-auto object-contain rounded-lg cursor-zoom-in hover:opacity-90 transition-opacity"
+                                        className="max-h-80 h-auto w-auto object-contain rounded-lg cursor-zoom-in hover:opacity-90 transition-opacity p-2 border border-gray-100 dark:border-gray-800" // Kept simple border for image
                                         onClick={() => setLightboxImage(getQuestionImage(currentQuestion, 'question')!)}
                                     />
                                 </div>
@@ -216,7 +252,7 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
                                     <div
                                         key={num}
                                         className={`
-                                            flex items-center gap-4 p-5 rounded-2xl border transition-all
+                                            flex items-center gap-2 p-3 rounded-xl border transition-all
                                             ${isCorrect
                                                 ? 'border-green-500 bg-green-50/50 dark:bg-green-900/10 ring-1 ring-green-500/20 shadow-lg shadow-green-500/5'
                                                 : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:border-gray-300 dark:hover:border-gray-700'}
@@ -242,7 +278,7 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
                                                 />
                                             ) : (
                                                 <div
-                                                    className={`text-lg font-medium text-gray-800 dark:text-gray-200 leading-normal ${isEnglish && !hasHebrew(answerText || '') ? 'text-left' : 'text-right'}`}
+                                                    className={`${answersFontSize} font-medium text-gray-800 dark:text-gray-200 ${isEnglish && !hasHebrew(answerText || '') ? 'text-left' : 'text-right'}`}
                                                     dir={isEnglish && !hasHebrew(answerText || '') ? 'ltr' : 'rtl'}
                                                 >
                                                     <LatexPreview content={answerText || '-'} minimal isEnglish={isEnglish} />
@@ -262,14 +298,13 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
                             })}
                         </div>
 
-                        {/* Explanation Section */}
-                        <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-900/30 p-6 rounded-2xl w-full">
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                        {/* Explanation Section - Reduced Padding/Frames */}
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                            <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
                                 {isEnglish ? 'Explanation' : 'הסבר'}
                             </h4>
                             <div
-                                className={`text-gray-600 dark:text-gray-400 text-lg leading-relaxed ${isEnglish && !hasHebrew(currentQuestion.explanation) ? 'text-left' : 'text-right'}`}
+                                className={`text-gray-600 dark:text-gray-400 ${explanationFontSize} ${isEnglish && !hasHebrew(currentQuestion.explanation) ? 'text-left' : 'text-right'}`}
                                 dir={isEnglish && !hasHebrew(currentQuestion.explanation) ? 'ltr' : 'rtl'}
                             >
                                 <LatexPreview content={currentQuestion.explanation} minimal isEnglish={isEnglish} />

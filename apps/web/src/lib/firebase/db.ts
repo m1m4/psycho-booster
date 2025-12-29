@@ -10,12 +10,35 @@ import {
     getDocs,
     DocumentData,
     QueryDocumentSnapshot,
+    getDoc,
     where,
     writeBatch,
     Timestamp
 } from "firebase/firestore";
 import { db } from "./config";
 import { QuestionSet, QuestionFilters } from "@/types/submit";
+
+/**
+ * Fetches a single question set from Firestore.
+ * 
+ * @param id The ID of the document to fetch.
+ * @returns The question set data or null if not found.
+ */
+export async function getQuestionSet(id: string): Promise<QuestionSet | null> {
+    const docRef = doc(db, "question_sets", id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+            ...data,
+            id: docSnap.id,
+            createdAt: data.createdAt?.toDate() || new Date(),
+        } as QuestionSet;
+    }
+
+    return null;
+}
 
 /**
  * Saves a question set to Firestore using a transaction to update stats.
@@ -75,6 +98,31 @@ export async function saveQuestionSet(data: Omit<QuestionSet, 'id' | 'createdAt'
     }
 }
 
+
+
+/**
+ * Updates an existing question set.
+ * 
+ * @param id The ID of the document to update.
+ * @param data Partial data to update.
+ */
+export async function updateQuestionSet(id: string, data: Partial<QuestionSet>): Promise<void> {
+    try {
+        const docRef = doc(db, "question_sets", id);
+        // Note: For now we're not recalculating granular statistics on update to avoid complexity.
+        // If categories change, stats might drift until a full recalculation.
+        await import("firebase/firestore").then(mod => mod.updateDoc(docRef, {
+            ...data,
+            updatedAt: serverTimestamp()
+        }));
+
+        // Optionally recalculate all stats if critical fields changed?
+        // Let's assume updates are mostly content fixes for now.
+    } catch (error) {
+        console.error("Error updating question set:", error);
+        throw error;
+    }
+}
 
 /**
  * Bulk deletes question sets.

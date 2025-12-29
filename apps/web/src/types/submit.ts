@@ -1,15 +1,16 @@
 export interface QuestionItem {
     id: number;
     questionText: string;
-    questionImage: File | null;
+    questionImage: File | string | null;
+    answersMode: 'text' | 'image';
     answer1: string;
-    answer1Image: File | null;
+    answer1Image: File | string | null;
     answer2: string;
-    answer2Image: File | null;
+    answer2Image: File | string | null;
     answer3: string;
-    answer3Image: File | null;
+    answer3Image: File | string | null;
     answer4: string;
-    answer4Image: File | null;
+    answer4Image: File | string | null;
     correctAnswer: string;
     explanation: string;
     difficulty: string;
@@ -19,6 +20,7 @@ export const DEFAULT_QUESTION: QuestionItem = {
     id: 1,
     questionText: '',
     questionImage: null,
+    answersMode: 'text',
     answer1: '',
     answer1Image: null,
     answer2: '',
@@ -115,7 +117,7 @@ export interface QuestionSet {
     assetImageUrl?: string | null;
     questions: SavedQuestionItem[]; // Using SavedQuestionItem
     author: string;
-    status: 'pending' | 'initial' | 'approved';
+    status: 'draft' | 'pending' | 'initial' | 'approved';
     createdAt?: any; // Firestore Timestamp
 }
 

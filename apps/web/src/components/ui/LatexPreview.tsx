@@ -81,7 +81,7 @@ export function LatexPreview({
                         ${minimal
                             ? 'p-0 bg-transparent border-none shadow-none'
                             : 'p-4 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm'} 
-                        text-black dark:text-white min-h-[auto] whitespace-pre-wrap break-words [&_strong]:font-bold
+                        text-black dark:text-white min-h-[auto] whitespace-pre-wrap break-words [&_strong]:font-black
                     `}
                     style={{
                         lineHeight: '1.8',
