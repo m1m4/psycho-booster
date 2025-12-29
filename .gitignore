@@ -27,6 +27,7 @@ dist/
 web-build/
 expo-env.d.ts
 metro-health-check*
+.metro-health-check*
 ios/
 android/
 *.orig.*
@@ -109,3 +110,7 @@ public/workbox-*.js
 public/worker-*.js
 public/fallback-*.js
 sw.js.map
+apps/web/public/sw.js
+
+# Native (Additional)
+.kotlin/
