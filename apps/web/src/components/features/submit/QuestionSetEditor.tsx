@@ -352,6 +352,9 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
             queryClient.invalidateQueries({ queryKey: ['statistics'] });
             queryClient.invalidateQueries({ queryKey: ['questions'] });
 
+            // Close modal first to ensure clean state
+            setIsPreviewOpen(false);
+
             if (onSuccess) {
                 onSuccess(newId);
             } else {
@@ -368,7 +371,6 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                     });
                     setActiveQuestionIndex(0);
                 }
-                setIsPreviewOpen(false);
             }
 
         } catch (error) {

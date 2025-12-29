@@ -19,8 +19,10 @@ function SubmitPageContent() {
     });
 
     const handleEditorSuccess = (newId: string) => {
-        // Redirect to viewer after success
-        router.push('/viewer');
+        // Use replace and a small delay for stability
+        setTimeout(() => {
+            router.replace('/viewer?success=true');
+        }, 150);
     };
 
     if (editId && isLoading) {
