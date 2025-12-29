@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { QuestionItem, SavedQuestionItem, SUBCATEGORY_OPTIONS, TOPIC_OPTIONS } from '@/types/submit';
-import { LatexPreview } from '@/components/ui/LatexPreview';
+import { PreviewRender } from '@/components/ui/PreviewRender';
 import { ImageLightbox } from '@/components/ui/ImageLightbox';
 
 /**
@@ -36,7 +36,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
     english: 'אנגלית'
 };
 
-interface PreviewProps {
+interface QuestionPreviewProps {
     formData: {
         category: string;
         subcategory: string;
@@ -49,7 +49,7 @@ interface PreviewProps {
     isEnglish: boolean;
 }
 
-export function Preview({ formData, isEnglish }: PreviewProps) {
+export function QuestionPreview({ formData, isEnglish }: QuestionPreviewProps) {
     const [activeTab, setActiveTab] = useState(0);
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
     const { questions, assetFile, assetImageUrl, assetText } = formData;
@@ -116,7 +116,7 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
                 className={`dark:text-gray-300 text-gray-700 ${isEnglish && !hasHebrew(assetText) ? 'text-left' : 'text-right'}`}
                 dir={isEnglish && !hasHebrew(assetText) ? 'ltr' : 'rtl'}
             >
-                <LatexPreview content={assetText} minimal isEnglish={isEnglish} />
+                <PreviewRender content={assetText} minimal isEnglish={isEnglish} />
             </div>
         );
 
@@ -222,7 +222,7 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
                                 className={`${questionFontSize} font-normal text-gray-900 dark:text-white whitespace-pre-wrap ${isEnglish && !hasHebrew(currentQuestion.questionText) ? 'text-left' : 'text-right'}`}
                                 dir={isEnglish && !hasHebrew(currentQuestion.questionText) ? 'ltr' : 'rtl'}
                             >
-                                <LatexPreview content={currentQuestion.questionText} minimal isEnglish={isEnglish} />
+                                <PreviewRender content={currentQuestion.questionText} minimal isEnglish={isEnglish} />
                             </div>
 
                             {/* Question Image */}
@@ -281,7 +281,7 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
                                                     className={`${answersFontSize} font-medium text-gray-800 dark:text-gray-200 ${isEnglish && !hasHebrew(answerText || '') ? 'text-left' : 'text-right'}`}
                                                     dir={isEnglish && !hasHebrew(answerText || '') ? 'ltr' : 'rtl'}
                                                 >
-                                                    <LatexPreview content={answerText || '-'} minimal isEnglish={isEnglish} />
+                                                    <PreviewRender content={answerText || '-'} minimal isEnglish={isEnglish} />
                                                 </div>
                                             )}
                                         </div>
@@ -307,7 +307,7 @@ export function Preview({ formData, isEnglish }: PreviewProps) {
                                 className={`text-gray-600 dark:text-gray-400 ${explanationFontSize} ${isEnglish && !hasHebrew(currentQuestion.explanation) ? 'text-left' : 'text-right'}`}
                                 dir={isEnglish && !hasHebrew(currentQuestion.explanation) ? 'ltr' : 'rtl'}
                             >
-                                <LatexPreview content={currentQuestion.explanation} minimal isEnglish={isEnglish} />
+                                <PreviewRender content={currentQuestion.explanation} minimal isEnglish={isEnglish} />
                             </div>
                         </div>
                     </div>

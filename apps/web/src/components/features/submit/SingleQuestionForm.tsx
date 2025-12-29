@@ -1,10 +1,10 @@
 import React from 'react';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { LatexPreview } from '@/components/ui/LatexPreview';
+import { PreviewRender } from '@/components/ui/PreviewRender';
 import { CameraIcon, XIcon } from './SubmitIcons';
 import { AnswersList } from './AnswersList';
-import { Preview, useResponsiveFontSize, hasHebrew } from './Preview';
+import { QuestionPreview, useResponsiveFontSize, hasHebrew } from './QuestionPreview';
 import { QuestionItem } from '@/types/submit';
 
 interface SingleQuestionFormProps {
@@ -95,7 +95,7 @@ export function SingleQuestionForm({
                         className={`p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800/50 ${useResponsiveFontSize(question.questionText)} font-normal text-gray-900 dark:text-white whitespace-pre-wrap ${isEnglish && !hasHebrew(question.questionText) ? 'text-left' : 'text-right'}`}
                         dir={isEnglish && !hasHebrew(question.questionText) ? 'ltr' : 'rtl'}
                     >
-                        <LatexPreview content={question.questionText} minimal isEnglish={isEnglish} />
+                        <PreviewRender content={question.questionText} minimal isEnglish={isEnglish} />
                     </div>
                 </div>
             )}
@@ -187,7 +187,7 @@ export function SingleQuestionForm({
                             className={`p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800/50 text-gray-600 dark:text-gray-400 ${useResponsiveFontSize(question.explanation)} ${isEnglish && !hasHebrew(question.explanation) ? 'text-left' : 'text-right'}`}
                             dir={isEnglish && !hasHebrew(question.explanation) ? 'ltr' : 'rtl'}
                         >
-                            <LatexPreview content={question.explanation} minimal isEnglish={isEnglish} />
+                            <PreviewRender content={question.explanation} minimal isEnglish={isEnglish} />
                         </div>
                     </div>
                 )}

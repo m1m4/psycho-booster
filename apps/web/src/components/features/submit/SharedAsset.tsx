@@ -1,6 +1,6 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/Textarea';
-import { LatexPreview } from '@/components/ui/LatexPreview';
+import { PreviewRender } from '@/components/ui/PreviewRender';
 import { CameraIcon, XIcon } from './SubmitIcons';
 
 interface SharedAssetProps {
@@ -103,7 +103,7 @@ export function SharedAsset({
                         disabled={!isSubCategorySelected}
                         error={textError ? ' ' : undefined}
                     />
-                    {showLatex && <LatexPreview content={assetText} />}
+                    {showLatex && <PreviewRender content={assetText} />}
                 </>
             )}
         </div>

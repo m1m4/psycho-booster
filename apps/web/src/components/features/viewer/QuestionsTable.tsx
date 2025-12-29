@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { getPaginatedQuestions, deleteQuestionSets, recalculateStatistics } from '@/lib/firebase/db';
 import { QuestionSet, SUBCATEGORY_OPTIONS, QuestionFilters } from '@/types/submit';
-import { PreviewModal } from '@/components/features/submit/PreviewModal';
-import { CATEGORY_LABELS } from '@/components/features/submit/Preview';
+import { QuestionModal } from '@/components/features/submit/QuestionModal';
+import { CATEGORY_LABELS } from '@/components/features/submit/QuestionPreview';
 import { StatisticsPanel } from './StatisticsPanel';
 import { FilterPanel } from './FilterPanel';
 
@@ -371,7 +371,7 @@ export function QuestionsTable() {
 
             {
                 selectedQuestion && (
-                    <PreviewModal
+                    <QuestionModal
                         isOpen={isModalOpen}
                         onClose={() => setIsModalOpen(false)}
                         onConfirm={() => { }}

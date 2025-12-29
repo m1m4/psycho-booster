@@ -1,9 +1,9 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/Textarea';
-import { LatexPreview } from '@/components/ui/LatexPreview';
+import { PreviewRender } from '@/components/ui/PreviewRender';
 import { CameraIcon, XIcon } from './SubmitIcons';
 import { QuestionItem } from '@/types/submit';
-import { useResponsiveFontSize, hasHebrew } from './Preview';
+import { useResponsiveFontSize, hasHebrew } from './QuestionPreview';
 
 interface AnswersListProps {
     question: QuestionItem;
@@ -181,7 +181,7 @@ export function AnswersList({
                                                     className={`${useResponsiveFontSize("a".repeat(Math.max((question.answer1 || "").length, (question.answer2 || "").length, (question.answer3 || "").length, (question.answer4 || "").length)))} font-medium text-gray-800 dark:text-gray-200 ${isEnglish && !hasHebrew(answerValue || '') ? 'text-left' : 'text-right'}`}
                                                     dir={isEnglish && !hasHebrew(answerValue || '') ? 'ltr' : 'rtl'}
                                                 >
-                                                    <LatexPreview content={answerValue || '-'} minimal isEnglish={isEnglish} />
+                                                    <PreviewRender content={answerValue || '-'} minimal isEnglish={isEnglish} />
                                                 </div>
                                             </div>
 

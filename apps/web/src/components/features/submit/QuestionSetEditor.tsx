@@ -6,7 +6,7 @@ import { QuestionMetadata } from '@/components/features/submit/QuestionMetadata'
 import { SharedAsset } from '@/components/features/submit/SharedAsset';
 import { QuestionTabs } from '@/components/features/submit/QuestionTabs';
 import { SingleQuestionForm } from '@/components/features/submit/SingleQuestionForm';
-import { PreviewModal } from '@/components/features/submit/PreviewModal';
+import { QuestionModal } from '@/components/features/submit/QuestionModal';
 import { uploadFile } from '@/lib/firebase/upload';
 import { saveQuestionSet, updateQuestionSet } from '@/lib/firebase/db';
 import { useQueryClient } from '@tanstack/react-query';
@@ -468,7 +468,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 </button>
             </div>
 
-            <PreviewModal
+            <QuestionModal
                 isOpen={isPreviewOpen}
                 onClose={() => setIsPreviewOpen(false)}
                 onConfirm={handleConfirmSubmit}

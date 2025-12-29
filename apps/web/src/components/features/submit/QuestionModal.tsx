@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { Preview } from './Preview';
+import { QuestionPreview } from './QuestionPreview';
 import { QuestionItem, SavedQuestionItem } from '@/types/submit';
 
-interface PreviewModalProps {
+interface QuestionModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
@@ -20,7 +20,7 @@ interface PreviewModalProps {
     readOnly?: boolean;
 }
 
-export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, isSubmitting = false, readOnly = false }: PreviewModalProps) {
+export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish, isSubmitting = false, readOnly = false }: QuestionModalProps) {
     const isAssetRequiredSubcategory =
         formData.subcategory === 'chart_inference' ||
         formData.subcategory === 'reading_comprehension_verbal' ||
@@ -83,7 +83,7 @@ export function PreviewModal({ isOpen, onClose, onConfirm, formData, isEnglish, 
 
                 {/* Scrollable Body */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-                    <Preview formData={formData} isEnglish={isEnglish} />
+                    <QuestionPreview formData={formData} isEnglish={isEnglish} />
                 </div>
 
                 {/* Footer Actions */}
