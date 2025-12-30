@@ -12,22 +12,41 @@ export const hasHebrew = (text: string): boolean => /[\u0590-\u05FF]/.test(text 
 
 /**
  * Hook to calculate responsive font size based on text length.
- * Target: ~50 chars/line roughly.
- * Logic: 
- * - Standard size: 1.125rem (text-lg) => approx 18px
- * - If text is short (< 80 chars), scale UP to 1.5rem (text-2xl)
- * - If text is long (> 300 chars), scale DOWN to 1rem (text-base) or 0.875rem (text-sm)
+ * Splits text by newlines and uses the longest line for calculation.
  */
-export const useResponsiveFontSize = (text: string, baseSize = 'text-lg') => {
+export const useResponsiveFontSize = (text: string, type: 'question' | 'answer' | 'explanation' = 'question') => {
     return useMemo(() => {
-        if (!text) return baseSize;
-        const len = text.length;
-        if (len < 45) return 'text-xl leading-relaxed'; // Reduced from 2xl, user requested 45
-        if (len < 120) return 'text-lg leading-relaxed'; // Reduced from xl
-        if (len > 400) return 'text-xs leading-relaxed'; // Reduced from sm
-        if (len > 250) return 'text-sm leading-relaxed'; // Reduced from base
-        return 'text-base leading-relaxed'; // Standard reduced to base
-    }, [text, baseSize]);
+        if (!text) return type === 'question' ? 'md:text-2xl text-xl' : 'text-base';
+
+        // Find longest line length
+        const lines = text.split('\n');
+        const maxLineLength = Math.max(...lines.map(line => line.length));
+
+        if (type === 'question') {
+            // Mobile: limit 35 (text-lg / text-xl)
+            // Desktop: limit 50 (md:text-xl / md:text-2xl)
+            const mobileSize = maxLineLength > 35 ? 'text-lg' : 'text-xl';
+            const desktopSize = maxLineLength > 50 ? 'md:text-xl' : 'md:text-2xl';
+            return `${mobileSize} ${desktopSize} leading-relaxed`;
+        }
+
+        if (type === 'explanation') {
+            // Mobile: limit 55 (text-base / text-lg)
+            // Desktop: limit 70 (md:text-lg / md:text-xl)
+            const mobileSize = maxLineLength > 55 ? 'text-base' : 'text-lg';
+            const desktopSize = maxLineLength > 70 ? 'md:text-lg' : 'md:text-xl';
+            return `${mobileSize} ${desktopSize} leading-relaxed`;
+        }
+
+        if (type === 'answer') {
+            // Limit 30 for both (text-base / text-lg)
+            // Note: Answers usually don't have separate mobile/desktop text sizes in the same way, 
+            // but we can scale if needed. Keeping it simple as requested.
+            return maxLineLength > 30 ? 'text-base leading-relaxed' : 'text-lg leading-relaxed';
+        }
+
+        return 'text-base leading-relaxed';
+    }, [text, type]);
 };
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -71,8 +90,8 @@ export function QuestionPreview({ formData, isEnglish }: QuestionPreviewProps) {
     };
 
     // Calculate generic font sizes for current view
-    const questionFontSize = useResponsiveFontSize(currentQuestion.questionText);
-    const explanationFontSize = useResponsiveFontSize(currentQuestion.explanation);
+    const questionFontSize = useResponsiveFontSize(currentQuestion.questionText, 'question');
+    const explanationFontSize = useResponsiveFontSize(currentQuestion.explanation, 'explanation');
 
     // Find longest answer to normalize answer font sizes
     const longestAnswerLength = useMemo(() => {
@@ -85,7 +104,7 @@ export function QuestionPreview({ formData, isEnglish }: QuestionPreviewProps) {
     }, [currentQuestion]);
 
     // Create a dummy text of max length to get the unified class
-    const answersFontSize = useResponsiveFontSize("a".repeat(longestAnswerLength));
+    const answersFontSize = useResponsiveFontSize("a".repeat(longestAnswerLength), 'answer');
 
     const showAssetData = assetFile || assetImageUrl || assetText;
     const isAssetRequiredSubcategory =

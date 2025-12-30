@@ -83,7 +83,7 @@ export function SingleQuestionForm({
                 dir={isEnglish ? 'ltr' : undefined}
                 disabled={!isSubCategorySelected}
                 error={formErrors[`q${activeQuestionIndex}-text`] ? ' ' : undefined}
-                className={useResponsiveFontSize(question.questionText)}
+                className={useResponsiveFontSize(question.questionText, 'question')}
                 rows={4}
             />
             {showLatex && (
@@ -92,7 +92,7 @@ export function SingleQuestionForm({
                         {isEnglish ? 'Question Preview' : 'תצוגה מקדימה לשאלה'}
                     </div>
                     <div
-                        className={`p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800/50 ${useResponsiveFontSize(question.questionText)} font-normal text-gray-900 dark:text-white whitespace-pre-wrap ${isEnglish && !hasHebrew(question.questionText) ? 'text-left' : 'text-right'}`}
+                        className={`p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800/50 ${useResponsiveFontSize(question.questionText, 'question')} font-normal text-gray-900 dark:text-white whitespace-pre-wrap ${isEnglish && !hasHebrew(question.questionText) ? 'text-left' : 'text-right'}`}
                         dir={isEnglish && !hasHebrew(question.questionText) ? 'ltr' : 'rtl'}
                     >
                         <PreviewRender content={question.questionText} minimal isEnglish={isEnglish} />
@@ -175,7 +175,7 @@ export function SingleQuestionForm({
                     dir={isEnglish ? 'ltr' : 'rtl'}
                     disabled={!isSubCategorySelected}
                     error={formErrors[`q${activeQuestionIndex}-explanation`] ? ' ' : undefined}
-                    className={useResponsiveFontSize(question.explanation)}
+                    className={useResponsiveFontSize(question.explanation, 'explanation')}
                     rows={4}
                 />
                 {showLatex && (
@@ -184,7 +184,7 @@ export function SingleQuestionForm({
                             {isEnglish ? 'Explanation Preview' : 'תצוגה מקדימה להסבר'}
                         </h4>
                         <div
-                            className={`p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800/50 text-gray-600 dark:text-gray-400 ${useResponsiveFontSize(question.explanation)} ${isEnglish && !hasHebrew(question.explanation) ? 'text-left' : 'text-right'}`}
+                            className={`p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800/50 text-gray-600 dark:text-gray-400 ${useResponsiveFontSize(question.explanation, 'explanation')} ${isEnglish && !hasHebrew(question.explanation) ? 'text-left' : 'text-right'}`}
                             dir={isEnglish && !hasHebrew(question.explanation) ? 'ltr' : 'rtl'}
                         >
                             <PreviewRender content={question.explanation} minimal isEnglish={isEnglish} />

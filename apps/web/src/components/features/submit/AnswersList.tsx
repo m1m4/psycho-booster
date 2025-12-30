@@ -93,7 +93,7 @@ export function AnswersList({
                                                 value={answerValue}
                                                 onChange={(e) => handleQuestionChange(answerKey, e.target.value)}
                                                 onFocus={onFocus}
-                                                className={`transition-all ${useResponsiveFontSize("a".repeat(Math.max((question.answer1 || "").length, (question.answer2 || "").length, (question.answer3 || "").length, (question.answer4 || "").length)))} ${hasSelection
+                                                className={`transition-all ${useResponsiveFontSize("a".repeat(Math.max((question.answer1 || "").length, (question.answer2 || "").length, (question.answer3 || "").length, (question.answer4 || "").length)), 'answer')} ${hasSelection
                                                     ? isCorrect
                                                         ? 'border-2 border-green-500 bg-green-50/5 dark:bg-green-500/10'
                                                         : 'border-2 border-red-500 bg-red-100/10 dark:bg-red-900/20' // Bolder red for wrong answers
@@ -178,7 +178,7 @@ export function AnswersList({
 
                                             <div className="flex-1 min-w-0">
                                                 <div
-                                                    className={`${useResponsiveFontSize("a".repeat(Math.max((question.answer1 || "").length, (question.answer2 || "").length, (question.answer3 || "").length, (question.answer4 || "").length)))} font-medium text-gray-800 dark:text-gray-200 ${isEnglish && !hasHebrew(answerValue || '') ? 'text-left' : 'text-right'}`}
+                                                    className={`${useResponsiveFontSize("a".repeat(Math.max((question.answer1 || "").length, (question.answer2 || "").length, (question.answer3 || "").length, (question.answer4 || "").length)), 'answer')} font-medium text-gray-800 dark:text-gray-200 ${isEnglish && !hasHebrew(answerValue || '') ? 'text-left' : 'text-right'}`}
                                                     dir={isEnglish && !hasHebrew(answerValue || '') ? 'ltr' : 'rtl'}
                                                 >
                                                     <PreviewRender content={answerValue || '-'} minimal isEnglish={isEnglish} />
