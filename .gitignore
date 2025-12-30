@@ -105,12 +105,12 @@ Desktop.ini
 .stylelintcache
 
 # PWA / Service Workers
-**/public/sw.js
-**/public/workbox-*.js
-**/public/worker-*.js
-**/public/swe-worker-*.js
-**/public/fallback-*.js
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
+public/fallback-*.js
 sw.js.map
+apps/web/public/sw.js
 
 # Native (Additional)
 .kotlin/
