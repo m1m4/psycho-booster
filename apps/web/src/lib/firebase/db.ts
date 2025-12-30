@@ -14,7 +14,9 @@ import {
     where,
     writeBatch,
     Timestamp,
-    increment
+    increment,
+    onSnapshot,
+    getCountFromServer
 } from "firebase/firestore";
 import { db } from "./config";
 import { QuestionSet, QuestionFilters } from "@/types/submit";
@@ -71,22 +73,24 @@ export async function saveQuestionSet(data: Omit<QuestionSet, 'id' | 'createdAt'
                 createdAt: serverTimestamp(),
             });
 
-            // Update stats
-            const currentStats = statsDoc.exists() ? statsDoc.data() : { totalQuestions: 0, bySubcategory: {}, byStatus: {}, byTopic: {}, byCategory: {} };
+            // Update stats atomically using increment
             const subcategoryKey = `bySubcategory.${data.subcategory}`;
             const categoryKey = `byCategory.${data.category}`;
             const statusKey = `byStatus.${data.status}`;
+            const authorKey = `byAuthor.${data.author}`;
 
             const updates: any = {
-                totalQuestions: (currentStats.totalQuestions || 0) + 1,
-                [subcategoryKey]: (currentStats.bySubcategory?.[data.subcategory] || 0) + 1,
-                [categoryKey]: (currentStats.byCategory?.[data.category] || 0) + 1,
-                [statusKey]: (currentStats.byStatus?.[data.status] || 0) + 1
+                totalQuestions: increment(1),
+                [subcategoryKey]: increment(1),
+                [categoryKey]: increment(1),
+                [statusKey]: increment(1),
+                [authorKey]: increment(1),
+                [`byDifficulty.${data.difficulty}`]: increment(1)
             };
 
             if (data.topic) {
                 const topicKey = `byTopic.${data.topic}`;
-                updates[topicKey] = (currentStats.byTopic?.[data.topic] || 0) + 1;
+                updates[topicKey] = increment(1);
             }
 
             transaction.update(statsRef, updates);
@@ -162,6 +166,20 @@ export async function updateQuestionSet(id: string, data: Partial<QuestionSet>):
                 }
             }
 
+            // Check Author Change
+            if (data.author && data.author !== oldData.author) {
+                statsUpdates[`byAuthor.${oldData.author}`] = increment(-1);
+                statsUpdates[`byAuthor.${data.author}`] = increment(1);
+                statsChanged = true;
+            }
+
+            // Check Difficulty Change
+            if (data.difficulty && data.difficulty !== oldData.difficulty) {
+                statsUpdates[`byDifficulty.${oldData.difficulty}`] = increment(-1);
+                statsUpdates[`byDifficulty.${data.difficulty}`] = increment(1);
+                statsChanged = true;
+            }
+
             // 3. Perform Updates
             transaction.update(docRef, {
                 ...data,
@@ -204,6 +222,34 @@ export async function deleteQuestionSets(ids: string[]): Promise<void> {
     }
 }
 
+/**
+ * Bulk updates question sets status to approved.
+ * 
+ * @param ids Array of document IDs to approve.
+ */
+export async function approveQuestionSets(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    try {
+        const batch = writeBatch(db);
+        ids.forEach(id => {
+            const docRef = doc(db, "question_sets", id);
+            batch.update(docRef, {
+                status: 'approved',
+                updatedAt: serverTimestamp()
+            });
+        });
+
+        await batch.commit();
+
+        // Recalculate stats after bulk approval
+        await recalculateStatistics();
+    } catch (error) {
+        console.error("Error batch approving question sets:", error);
+        throw error;
+    }
+}
+
 export async function getStatistics() {
     try {
         const statsRef = doc(db, "stats", "general");
@@ -220,9 +266,27 @@ export async function getStatistics() {
     }
 }
 
+/**
+ * Subscribes to real-time statistics updates.
+ * 
+ * @param callback Function to call when statistics change.
+ * @returns Unsubscribe function.
+ */
+export function subscribeToStatistics(callback: (stats: any) => void) {
+    const statsRef = doc(db, "stats", "general");
+    return onSnapshot(statsRef, (docSnap) => {
+        if (docSnap.exists()) {
+            callback(docSnap.data());
+        }
+    }, (error) => {
+        console.error("Error subscribing to statistics:", error);
+    });
+}
+
 interface PaginatedResult {
     questions: QuestionSet[];
     lastVisible: QueryDocumentSnapshot<DocumentData> | null;
+    totalCount: number;
 }
 
 /**
@@ -238,80 +302,81 @@ export async function getPaginatedQuestions(
 ): Promise<PaginatedResult> {
     try {
         let q = collection(db, "question_sets") as any;
-        const constraints: any[] = [];
 
-        // Apply Filters
+        // 1. Build Base Constraints (Common Filters)
+        const baseConstraints: any[] = [];
+
         if (filters) {
-            if (filters.creator) {
-                constraints.push(where('author', '==', filters.creator));
-            }
-            if (filters.category) {
-                constraints.push(where('category', '==', filters.category));
-            }
+            if (filters.creator) baseConstraints.push(where('author', '==', filters.creator));
+            if (filters.category) baseConstraints.push(where('category', '==', filters.category));
             if (filters.subcategory) {
-                constraints.push(where('subcategory', '==', filters.subcategory));
+                if (Array.isArray(filters.subcategory)) {
+                    if (filters.subcategory.length > 0) baseConstraints.push(where('subcategory', 'in', filters.subcategory));
+                } else {
+                    baseConstraints.push(where('subcategory', '==', filters.subcategory));
+                }
             }
-            if (filters.status) {
-                constraints.push(where('status', '==', filters.status));
+            if (filters.topic) {
+                if (Array.isArray(filters.topic)) {
+                    if (filters.topic.length > 0) baseConstraints.push(where('topic', 'in', filters.topic));
+                } else {
+                    baseConstraints.push(where('topic', '==', filters.topic));
+                }
             }
-            if (filters.difficulty) {
-                constraints.push(where('difficulty', '==', filters.difficulty));
-            }
-            if (filters.excludeAuthor) {
-                constraints.push(where('author', '!=', filters.excludeAuthor));
-            }
+            if (filters.status) baseConstraints.push(where('status', '==', filters.status));
+            if (filters.difficulty) baseConstraints.push(where('difficulty', '==', filters.difficulty));
 
             // Date Range
-            if (filters.startDate) {
-                constraints.push(where('createdAt', '>=', Timestamp.fromDate(filters.startDate)));
-            }
-            if (filters.endDate) {
-                constraints.push(where('createdAt', '<=', Timestamp.fromDate(filters.endDate)));
-            }
+            if (filters.startDate) baseConstraints.push(where('createdAt', '>=', Timestamp.fromDate(filters.startDate)));
+            if (filters.endDate) baseConstraints.push(where('createdAt', '<=', Timestamp.fromDate(filters.endDate)));
         }
 
-        // Apply Sort & Pagination
-        // Note: Firestore requires the first orderBy field to match any inequality filter fields.
-        // If sorting by createdAt, and filtering by category (equality), it's fine.
-        // If filtering by createdAt (inequality), we MUST sort by createdAt first.
-
+        // 2. Build Count Query (Base + Exclude Author if needed)
+        const countConstraints = [...baseConstraints];
         if (filters?.excludeAuthor) {
-            // If using != filter, we MUST sort by that field first
-            constraints.push(orderBy('author', 'asc'));
+            countConstraints.push(where('author', '!=', filters.excludeAuthor));
+            countConstraints.push(orderBy('author', 'asc')); // Required for inequality filter
+        }
 
-            // Then we can sort by other things if we have a composite index
-            if (sortField !== 'author') {
-                constraints.push(orderBy(sortField, sortDirection));
-            }
-        } else if (filters?.startDate || filters?.endDate) {
-            // Force sort by createdAt if filtering by date range to satisfy Firestore constraint
-            constraints.push(orderBy('createdAt', sortDirection));
+        const countSnapshot = await getCountFromServer(query(q, ...countConstraints));
+        const totalCount = countSnapshot.data().count;
+
+        // 3. Build Data Query (Base + Sort + Limit + StartAfter)
+        const dataConstraints = [...baseConstraints];
+
+        // Sort Logic
+        if (filters?.startDate || filters?.endDate) {
+            dataConstraints.push(orderBy('createdAt', sortDirection));
             if (sortField !== 'createdAt') {
-                // Secondary sort if needed (may require index)
-                constraints.push(orderBy(sortField, sortDirection));
+                dataConstraints.push(orderBy(sortField, sortDirection));
             }
         } else {
-            constraints.push(orderBy(sortField, sortDirection));
+            dataConstraints.push(orderBy(sortField, sortDirection));
         }
 
-        constraints.push(limit(pageSize));
+        // Fetch Limit (Client-side filtering buffer)
+        const fetchLimit = filters?.excludeAuthor ? pageSize + 5 : pageSize;
+        dataConstraints.push(limit(fetchLimit));
 
         if (lastVisible) {
-            constraints.push(startAfter(lastVisible));
+            dataConstraints.push(startAfter(lastVisible));
         }
 
-        const finalQuery = query(q, ...constraints);
-
+        const finalQuery = query(q, ...dataConstraints);
         const snapshot = await getDocs(finalQuery);
-        const questions: QuestionSet[] = [];
+        let questions: QuestionSet[] = snapshot.docs.map(doc => doc.data() as QuestionSet);
 
-        snapshot.forEach((doc) => {
-            questions.push(doc.data() as QuestionSet);
-        });
+        // Client-side filtering for excludeAuthor (to preserve sort order)
+        if (filters?.excludeAuthor) {
+            questions = questions.filter(q => q.author !== filters.excludeAuthor);
+            // Cap at original page size
+            questions = questions.slice(0, pageSize);
+        }
 
         return {
             questions,
-            lastVisible: snapshot.docs.length < pageSize ? null : (snapshot.docs[snapshot.docs.length - 1] as QueryDocumentSnapshot<DocumentData> || null)
+            lastVisible: snapshot.docs.length < fetchLimit ? null : (snapshot.docs[snapshot.docs.length - 1] as QueryDocumentSnapshot<DocumentData> || null),
+            totalCount
         };
     } catch (error) {
         console.error("Error fetching questions:", error);
@@ -333,7 +398,12 @@ export async function recalculateStatistics() {
             byCategory: {} as Record<string, number>,
             bySubcategory: {} as Record<string, number>,
             byStatus: {} as Record<string, number>,
-            byTopic: {} as Record<string, number>
+            byDifficulty: {} as Record<string, number>,
+            byTopic: {} as Record<string, number>,
+            byAuthor: {} as Record<string, number>,
+            authorsByCategory: {} as Record<string, Set<string>>,
+            subcategoriesByCategory: {} as Record<string, Set<string>>,
+            topicsBySubcategory: {} as Record<string, Set<string>>
         };
 
         questionsSnapshot.forEach((doc) => {
@@ -349,13 +419,36 @@ export async function recalculateStatistics() {
             const status = data.status || 'pending';
             stats.byStatus[status] = (stats.byStatus[status] || 0) + 1;
 
+            const author = data.author || 'unknown';
+            stats.byAuthor[author] = (stats.byAuthor[author] || 0) + 1;
+
+            const difficulty = data.difficulty || 'medium';
+            stats.byDifficulty[difficulty] = (stats.byDifficulty[difficulty] || 0) + 1;
+
+            // Track Relations
+            if (!stats.authorsByCategory[cat]) stats.authorsByCategory[cat] = new Set();
+            stats.authorsByCategory[cat].add(author);
+
+            if (!stats.subcategoriesByCategory[cat]) stats.subcategoriesByCategory[cat] = new Set();
+            stats.subcategoriesByCategory[cat].add(sub);
+
             if (data.topic) {
                 stats.byTopic[data.topic] = (stats.byTopic[data.topic] || 0) + 1;
+                if (!stats.topicsBySubcategory[sub]) stats.topicsBySubcategory[sub] = new Set();
+                stats.topicsBySubcategory[sub].add(data.topic);
             }
         });
 
-        await import("firebase/firestore").then(mod => mod.setDoc(statsRef, stats));
-        return stats;
+        // Convert Sets to Arrays for Firestore
+        const finalStats = {
+            ...stats,
+            authorsByCategory: Object.fromEntries(Object.entries(stats.authorsByCategory).map(([k, v]) => [k, Array.from(v)])),
+            subcategoriesByCategory: Object.fromEntries(Object.entries(stats.subcategoriesByCategory).map(([k, v]) => [k, Array.from(v)])),
+            topicsBySubcategory: Object.fromEntries(Object.entries(stats.topicsBySubcategory).map(([k, v]) => [k, Array.from(v)]))
+        };
+
+        await import("firebase/firestore").then(mod => mod.setDoc(statsRef, finalStats));
+        return finalStats;
     } catch (error) {
         console.error("Error recalculating statistics:", error);
         throw error;

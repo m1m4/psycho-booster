@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getStatistics } from '@/lib/firebase/db';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getStatistics, subscribeToStatistics } from '@/lib/firebase/db';
 import { CATEGORY_LABELS } from '@/components/features/submit/QuestionPreview';
 import { SUBCATEGORY_OPTIONS, TOPIC_OPTIONS } from '@/types/submit';
 
@@ -14,11 +14,23 @@ interface StatisticsPanelProps {
 
 export function StatisticsPanel({ onStatusClick, activeStatus }: StatisticsPanelProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const queryClient = useQueryClient();
 
     const { data: stats, isLoading, isError } = useQuery({
         queryKey: ['statistics'],
         queryFn: getStatistics,
+        staleTime: 5 * 60 * 1000, // Consider data fresh for 5 mins as we have real-time updates
     });
+
+    useEffect(() => {
+        // Subscribe to real-time updates
+        const unsubscribe = subscribeToStatistics((newStats) => {
+            // Manually update the React Query cache when new data arrives
+            queryClient.setQueryData(['statistics'], newStats);
+        });
+
+        return () => unsubscribe();
+    }, [queryClient]);
 
     if (isLoading) return <div className="p-4 bg-white dark:bg-gray-900 rounded-xl animate-pulse h-32"></div>;
     if (isError || !stats) return null;

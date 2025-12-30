@@ -342,7 +342,13 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
             if (initialData && initialData.id && initialData.id !== 'new') {
                 if (initialData.status === 'pending') {
                     const currentUserAuthorName = user?.email?.split('@')[0];
-                    if (currentUserAuthorName && authorName !== currentUserAuthorName) {
+                    // Trigger initial review if:
+                    // 1. Someone else edits it (preserving the original author)
+                    // 2. Someone takes ownership of an 'unknown' or 'AI' question
+                    const isOtherUser = currentUserAuthorName && authorName !== currentUserAuthorName;
+                    const wasAutoAuthor = initialData.author === 'unknown' || initialData.author === 'AI';
+
+                    if (isOtherUser || wasAutoAuthor) {
                         status = 'initial';
                     }
                 } else if (initialData.status) {
@@ -382,7 +388,8 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
             // Ensure cache is updated before navigating
             await Promise.all([
                 queryClient.invalidateQueries({ queryKey: ['statistics'] }),
-                queryClient.invalidateQueries({ queryKey: ['questions'] })
+                queryClient.invalidateQueries({ queryKey: ['questions'] }),
+                queryClient.invalidateQueries({ queryKey: ['inboxCount'] })
             ]);
 
             // Close modal first to ensure clean state

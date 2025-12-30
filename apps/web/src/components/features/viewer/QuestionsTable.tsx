@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { getPaginatedQuestions, deleteQuestionSets, recalculateStatistics } from '@/lib/firebase/db';
-import { QuestionSet, SUBCATEGORY_OPTIONS, QuestionFilters } from '@/types/submit';
+import { getPaginatedQuestions, deleteQuestionSets, recalculateStatistics, approveQuestionSets } from '@/lib/firebase/db';
+import { QuestionSet, SUBCATEGORY_OPTIONS, TOPIC_OPTIONS, QuestionFilters } from '@/types/submit';
 import { QuestionModal } from '@/components/features/submit/QuestionModal';
 import { CATEGORY_LABELS } from '@/components/features/submit/QuestionPreview';
 import { StatisticsPanel } from './StatisticsPanel';
 import { FilterPanel } from './FilterPanel';
+
+import { ExportTemplate } from './ExportTemplate';
 
 const DIFFICULTY_ORDER = { easy: 1, medium: 2, hard: 3 };
 const STATUS_ORDER = { pending: 1, initial: 2, approved: 3 };
@@ -22,6 +24,7 @@ interface QuestionsTableProps {
     showAddButton?: boolean;
     showFilterPanel?: boolean;
     showStatistics?: boolean;
+    showApproveButton?: boolean;
 }
 
 export function QuestionsTable({
@@ -30,9 +33,14 @@ export function QuestionsTable({
     fixedFilters = {},
     showAddButton = true,
     showFilterPanel = true,
-    showStatistics = true
+    showStatistics = true,
+    showApproveButton = false
 }: QuestionsTableProps) {
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: SortDirection }>({ key: 'createdAt', direction: 'desc' });
+
+    // Export State
+    const [isExporting, setIsExporting] = useState(false);
+    const [questionsToExport, setQuestionsToExport] = useState<QuestionSet[]>([]);
 
     // Filter State
     const [showFilters, setShowFilters] = useState(false);
@@ -68,17 +76,11 @@ export function QuestionsTable({
         getNextPageParam: (lastPage) => lastPage.lastVisible,
     });
 
+    const totalCount = data?.pages[0]?.totalCount || 0;
     const questionsToDisplay = data?.pages.flatMap(page => page.questions) || [];
 
     // --- Selection Logic ---
-    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.checked) {
-            const allIds = new Set(questionsToDisplay.map(q => q.id));
-            setSelectedIds(allIds);
-        } else {
-            setSelectedIds(new Set());
-        }
-    };
+
 
     const handleSelectRow = (id: string) => {
         const newSelected = new Set(selectedIds);
@@ -100,12 +102,39 @@ export function QuestionsTable({
 
             // Cleanup UI
             setSelectedIds(new Set());
-            queryClient.invalidateQueries({ queryKey: ['questions'] });
-            queryClient.invalidateQueries({ queryKey: ['statistics'] });
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['questions'] }),
+                queryClient.invalidateQueries({ queryKey: ['statistics'] }),
+                queryClient.invalidateQueries({ queryKey: ['inboxCount'] })
+            ]);
             alert('הפריטים נמחקו בהצלחה.');
         } catch (error) {
             console.error(error);
             alert('שגיאה במחיקת הפריטים.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const handleBulkApprove = async () => {
+        if (selectedIds.size === 0) return;
+        if (!confirm(`האם אתה בטוח שברצונך לאשר ${selectedIds.size} פריטים?`)) return;
+
+        setIsDeleting(true); // Using isDeleting for loading state
+        try {
+            await approveQuestionSets(Array.from(selectedIds));
+
+            // Cleanup UI
+            setSelectedIds(new Set());
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['questions'] }),
+                queryClient.invalidateQueries({ queryKey: ['statistics'] }),
+                queryClient.invalidateQueries({ queryKey: ['inboxCount'] })
+            ]);
+            alert('הפריטים אוישרו בהצלחה.');
+        } catch (error) {
+            console.error(error);
+            alert('שגיאה באישור הפריטים.');
         } finally {
             setIsDeleting(false);
         }
@@ -172,6 +201,11 @@ export function QuestionsTable({
         return option ? option.label : sub;
     };
 
+    const getTopicLabel = (topic: string) => {
+        const option = Object.values(TOPIC_OPTIONS).flat().find(opt => opt.value === topic);
+        return option ? option.label : topic;
+    };
+
 
     const handleRowClick = (question: QuestionSet) => {
         setSelectedQuestion(question);
@@ -218,8 +252,114 @@ export function QuestionsTable({
         return <div className="text-red-500 p-4 font-mono text-xs overflow-auto max-w-full">{msg}</div>;
     };
 
+    const handleExport = async () => {
+        if (selectedIds.size === 0) return;
+
+        const selectedQuestions = questionsToDisplay.filter(q => selectedIds.has(q.id));
+        setQuestionsToExport(selectedQuestions as QuestionSet[]);
+        setIsExporting(true);
+
+        const { toJpeg } = await import('html-to-image');
+        const { jsPDF } = await import('jspdf');
+
+        // Allow render to complete
+        setTimeout(async () => {
+            try {
+                const container = document.getElementById('printable-area');
+                if (!container) {
+                    setIsExporting(false);
+                    return;
+                }
+
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const margin = 10;
+                const contentWidth = pageWidth - (margin * 2);
+                let currentY = margin;
+
+                /**
+                 * Helper to capture and add an element to PDF
+                 */
+                const addElementToPdf = async (element: HTMLElement | null, spacingAfter = 0) => {
+                    if (!element) return;
+                    try {
+                        // Capture as JPEG with 0.95 quality for significant size reduction vs PNG
+                        const dataUrl = await toJpeg(element, {
+                            quality: 0.95,
+                            backgroundColor: '#ffffff',
+                            pixelRatio: 1.5, // Reduced from 2.0 to save size, readable enough
+                            cacheBust: true
+                        });
+
+                        const imgProps = pdf.getImageProperties(dataUrl);
+                        const imgHeight = (imgProps.height * contentWidth) / imgProps.width;
+
+                        // Check for page break
+                        if (currentY + imgHeight > pageHeight - margin) {
+                            pdf.addPage();
+                            currentY = margin;
+                        }
+
+                        pdf.addImage(dataUrl, 'JPEG', margin, currentY, contentWidth, imgHeight);
+                        currentY += imgHeight + spacingAfter;
+                    } catch (err) {
+                        console.warn('Skipped element export:', err);
+                    }
+                };
+
+                // --- 1. Title ---
+                const titleEl = document.getElementById('export-questions-section')?.querySelector('h1');
+                await addElementToPdf(titleEl as HTMLElement, 5);
+
+                // --- 2. Questions ---
+                const questionElements = Array.from(document.querySelectorAll('.export-question-item'));
+                for (let i = 0; i < questionElements.length; i++) {
+                    await addElementToPdf(questionElements[i] as HTMLElement, 0); // Spacing handled by CSS margin capture
+                }
+
+                // Force Page Break after Questions (Part 1 -> Part 2)
+                pdf.addPage();
+                currentY = margin;
+
+                // --- 3. Answer Key ---
+                // We add a bit of spacing before the answer key if it's on the same page
+                if (currentY > margin && currentY + 40 < pageHeight) { // Heuristic check if worth adding spacing
+                    currentY += 10;
+                }
+
+                const answersTitle = document.getElementById('export-answers-section')?.querySelector('h2');
+                await addElementToPdf(answersTitle as HTMLElement, 5);
+
+                const answersGrid = document.getElementById('export-answers-grid');
+                await addElementToPdf(answersGrid as HTMLElement, 15);
+
+                // --- 4. Explanations ---
+                const explanationsTitle = document.getElementById('export-explanations-section')?.querySelector('h2');
+                await addElementToPdf(explanationsTitle as HTMLElement, 5);
+
+                const explanationElements = Array.from(document.querySelectorAll('.export-explanation-item'));
+                for (let i = 0; i < explanationElements.length; i++) {
+                    await addElementToPdf(explanationElements[i] as HTMLElement, 0);
+                }
+
+                pdf.save(`questions-export-${new Date().toISOString().slice(0, 10)}.pdf`);
+                setIsExporting(false);
+            } catch (err: unknown) {
+                console.error('Export failed:', err);
+                setIsExporting(false);
+            }
+        }, 2000); // 2s timeout for reliable asset loading
+    };
+
     return (
         <div className="space-y-4 relative">
+            {/* Hidden Printable Component - Offscreen but rendered */}
+            {isExporting && questionsToExport.length > 0 && (
+                <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '800px' }}>
+                    <ExportTemplate questions={questionsToExport} />
+                </div>
+            )}
             {/* Statistics Panel with click-to-filter */}
             {showStatistics && (
                 <StatisticsPanel
@@ -240,6 +380,8 @@ export function QuestionsTable({
             {showFilters && showFilterPanel && (
                 <FilterPanel
                     filters={filters}
+                    fixedFilters={fixedFilters}
+                    totalCount={totalCount}
                     onChange={setFilters}
                     onClose={() => setShowFilters(false)}
                 />
@@ -250,7 +392,9 @@ export function QuestionsTable({
                 <div className="flex items-center gap-4">
                     <h3 className="font-bold text-lg text-gray-800 dark:text-white">
                         {title}
-                        {selectedIds.size > 0 && ` `}
+                        {totalCount > 0 && (
+                            <span className="mr-2 text-blue-600 font-medium">({totalCount})</span>
+                        )}
                     </h3>
                     {selectedIds.size > 0 && (
                         <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
@@ -260,6 +404,21 @@ export function QuestionsTable({
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* Export Button */}
+                    <button
+                        onClick={handleExport}
+                        disabled={selectedIds.size === 0 || isExporting}
+                        className={`p-2 rounded-lg transition-all ${selectedIds.size > 0 ? 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}
+                        title={selectedIds.size > 0 ? 'ייצוא ל-PDF' : 'בחר פריטים לייצוא'}
+                    >
+                        {isExporting ? (
+                            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            <svg className="w-6 h-6 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                        )}
+                    </button>
                     {/* Add Button */}
                     {showAddButton && (
                         <button
@@ -277,7 +436,7 @@ export function QuestionsTable({
                     {showFilterPanel && (
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className={`p-2 rounded-lg transition-all ${showFilters ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                            className={`p-2 rounded-lg transition-all ${showFilters || Object.keys(filters).length > 0 ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                             title="סינון"
                         >
                             <svg className="w-6 h-6 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -301,6 +460,24 @@ export function QuestionsTable({
                             </svg>
                         )}
                     </button>
+
+                    {/* Approve Button */}
+                    {showApproveButton && (
+                        <button
+                            onClick={handleBulkApprove}
+                            disabled={selectedIds.size === 0 || isDeleting}
+                            className={`p-2 rounded-lg transition-all ${selectedIds.size > 0 ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}
+                            title={selectedIds.size > 0 ? 'אישור נבחרים' : 'בחר פריטים לאישור'}
+                        >
+                            {isDeleting ? (
+                                <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                <svg className="w-6 h-6 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -313,12 +490,13 @@ export function QuestionsTable({
                                     בחר
                                 </th>
                                 {[
-                                    { key: 'createdAt', label: 'זמן העלאה', width: 'w-[15%]' },
-                                    { key: 'author', label: 'יוצר', width: 'w-[15%]' },
-                                    { key: 'status', label: 'סטטוס', width: 'w-[15%]' },
-                                    { key: 'category', label: 'קטגוריה', width: 'w-[15%]' },
-                                    { key: 'subcategory', label: 'תת-קטגוריה', width: 'w-[20%]' },
-                                    { key: 'difficulty', label: 'רמת קושי', width: 'w-[15%]' },
+                                    { key: 'createdAt', label: 'זמן העלאה', width: 'w-[12%]' },
+                                    { key: 'author', label: 'יוצר', width: 'w-[12%]' },
+                                    { key: 'status', label: 'סטטוס', width: 'w-[12%]' },
+                                    { key: 'category', label: 'קטגוריה', width: 'w-[12%]' },
+                                    { key: 'subcategory', label: 'תת-קטגוריה', width: 'w-[15%]' },
+                                    { key: 'topic', label: 'נושא', width: 'w-[15%]' },
+                                    { key: 'difficulty', label: 'רמת קושי', width: 'w-[10%]' },
                                 ].map((col) => (
                                     <th
                                         key={col.key}
@@ -349,7 +527,7 @@ export function QuestionsTable({
                                 </tr>
                             ) : questionsToDisplay.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="p-8 text-center text-gray-500 dark:text-gray-400">לא נמצאו שאלות</td>
+                                    <td colSpan={10} className="p-8 text-center text-gray-500 dark:text-gray-400">לא נמצאו שאלות</td>
                                 </tr>
                             ) : (
                                 questionsToDisplay.map((q) => (
@@ -375,6 +553,7 @@ export function QuestionsTable({
                                         </td>
                                         <td className="px-6 py-4">{CATEGORY_LABELS[q.category || ''] || q.category}</td>
                                         <td className="px-6 py-4">{getSubcategoryLabel(q.subcategory || '')}</td>
+                                        <td className="px-6 py-4">{getTopicLabel(q.topic || '')}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${difficultyColor(q.difficulty || 'medium')}`}>
                                                 {difficultyLabel(q.difficulty || 'medium')}

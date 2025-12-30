@@ -129,7 +129,8 @@ export interface QuestionFilters {
     creator?: string;
     status?: string;
     category?: string;
-    subcategory?: string;
+    subcategory?: string | string[];
+    topic?: string | string[];
     difficulty?: string;
     excludeAuthor?: string;
 }
