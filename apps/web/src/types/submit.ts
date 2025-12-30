@@ -131,4 +131,5 @@ export interface QuestionFilters {
     category?: string;
     subcategory?: string;
     difficulty?: string;
+    excludeAuthor?: string;
 }

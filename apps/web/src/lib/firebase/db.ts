@@ -13,7 +13,8 @@ import {
     getDoc,
     where,
     writeBatch,
-    Timestamp
+    Timestamp,
+    increment
 } from "firebase/firestore";
 import { db } from "./config";
 import { QuestionSet, QuestionFilters } from "@/types/submit";
@@ -109,15 +110,69 @@ export async function saveQuestionSet(data: Omit<QuestionSet, 'id' | 'createdAt'
 export async function updateQuestionSet(id: string, data: Partial<QuestionSet>): Promise<void> {
     try {
         const docRef = doc(db, "question_sets", id);
-        // Note: For now we're not recalculating granular statistics on update to avoid complexity.
-        // If categories change, stats might drift until a full recalculation.
-        await import("firebase/firestore").then(mod => mod.updateDoc(docRef, {
-            ...data,
-            updatedAt: serverTimestamp()
-        }));
+        const statsRef = doc(db, "stats", "general");
 
-        // Optionally recalculate all stats if critical fields changed?
-        // Let's assume updates are mostly content fixes for now.
+        await runTransaction(db, async (transaction) => {
+            // 1. Get current document to know old values
+            const docSnap = await transaction.get(docRef);
+            if (!docSnap.exists()) {
+                throw new Error("Document does not exist!");
+            }
+            const oldData = docSnap.data() as QuestionSet;
+
+            // 2. Prepare Stats Updates
+            const statsUpdates: any = {};
+            let statsChanged = false;
+
+            // Check Status Change
+            if (data.status && data.status !== oldData.status) {
+                statsUpdates[`byStatus.${oldData.status}`] = increment(-1);
+                statsUpdates[`byStatus.${data.status}`] = increment(1);
+                statsChanged = true;
+            }
+
+            // Check Category Change
+            if (data.category && data.category !== oldData.category) {
+                statsUpdates[`byCategory.${oldData.category}`] = increment(-1);
+                statsUpdates[`byCategory.${data.category}`] = increment(1);
+                statsChanged = true;
+            }
+
+            // Check Subcategory Change
+            if (data.subcategory && data.subcategory !== oldData.subcategory) {
+                statsUpdates[`bySubcategory.${oldData.subcategory}`] = increment(-1);
+                statsUpdates[`bySubcategory.${data.subcategory}`] = increment(1);
+                statsChanged = true;
+            }
+
+            // Check Topic Change
+            if ('topic' in data) {
+                const oldTopic = oldData.topic;
+                const newTopic = data.topic;
+
+                if (oldTopic !== newTopic) {
+                    if (oldTopic) {
+                        statsUpdates[`byTopic.${oldTopic}`] = increment(-1);
+                        statsChanged = true;
+                    }
+                    if (newTopic) {
+                        statsUpdates[`byTopic.${newTopic}`] = increment(1);
+                        statsChanged = true;
+                    }
+                }
+            }
+
+            // 3. Perform Updates
+            transaction.update(docRef, {
+                ...data,
+                updatedAt: serverTimestamp()
+            });
+
+            if (statsChanged) {
+                transaction.update(statsRef, statsUpdates);
+            }
+        });
+
     } catch (error) {
         console.error("Error updating question set:", error);
         throw error;
@@ -152,8 +207,7 @@ export async function deleteQuestionSets(ids: string[]): Promise<void> {
 export async function getStatistics() {
     try {
         const statsRef = doc(db, "stats", "general");
-        const snapshot = await getDocs(query(collection(db, "stats"))); // Just getting the doc directly via getDoc would be better but getDocs is imported
-        const docSnap = await import("firebase/firestore").then(mod => mod.getDoc(statsRef));
+        const docSnap = await getDoc(statsRef);
 
         if (docSnap.exists()) {
             return docSnap.data();
@@ -203,6 +257,9 @@ export async function getPaginatedQuestions(
             if (filters.difficulty) {
                 constraints.push(where('difficulty', '==', filters.difficulty));
             }
+            if (filters.excludeAuthor) {
+                constraints.push(where('author', '!=', filters.excludeAuthor));
+            }
 
             // Date Range
             if (filters.startDate) {
@@ -218,7 +275,15 @@ export async function getPaginatedQuestions(
         // If sorting by createdAt, and filtering by category (equality), it's fine.
         // If filtering by createdAt (inequality), we MUST sort by createdAt first.
 
-        if (filters?.startDate || filters?.endDate) {
+        if (filters?.excludeAuthor) {
+            // If using != filter, we MUST sort by that field first
+            constraints.push(orderBy('author', 'asc'));
+
+            // Then we can sort by other things if we have a composite index
+            if (sortField !== 'author') {
+                constraints.push(orderBy(sortField, sortDirection));
+            }
+        } else if (filters?.startDate || filters?.endDate) {
             // Force sort by createdAt if filtering by date range to satisfy Firestore constraint
             constraints.push(orderBy('createdAt', sortDirection));
             if (sortField !== 'createdAt') {

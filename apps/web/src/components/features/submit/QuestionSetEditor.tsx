@@ -10,6 +10,7 @@ import { QuestionModal } from '@/components/features/submit/QuestionModal';
 import { uploadFile } from '@/lib/firebase/upload';
 import { saveQuestionSet, updateQuestionSet } from '@/lib/firebase/db';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 interface QuestionSetEditorProps {
     initialData?: Partial<QuestionSet> | null;
@@ -186,6 +187,8 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
         });
     };
 
+    const { user } = useAuth(); // Get authenticated user
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -320,6 +323,33 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
 
             const overallDifficulty = processedQuestions.length > 0 ? processedQuestions[0].difficulty : 'medium';
 
+            // Determine Author - Preserve original author unless it's 'unknown' or 'AI'
+            let authorName = 'unknown';
+            const originalAuthor = initialData?.author;
+
+            if (originalAuthor && originalAuthor !== 'unknown' && originalAuthor !== 'AI') {
+                authorName = originalAuthor;
+            } else if (user?.email) {
+                // Set to current user if original is unknown/AI or it's a new question
+                authorName = user.email.split('@')[0];
+            } else if (originalAuthor) {
+                // Fallback to original if no current user (unlikely but safe)
+                authorName = originalAuthor;
+            }
+
+            // Determine Status
+            let status: QuestionSet['status'] = 'pending';
+            if (initialData && initialData.id && initialData.id !== 'new') {
+                if (initialData.status === 'pending') {
+                    const currentUserAuthorName = user?.email?.split('@')[0];
+                    if (currentUserAuthorName && authorName !== currentUserAuthorName) {
+                        status = 'initial';
+                    }
+                } else if (initialData.status) {
+                    status = initialData.status;
+                }
+            }
+
             const finalData = {
                 category: formData.category,
                 subcategory: formData.subcategory,
@@ -328,8 +358,8 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 assetText: formData.assetText,
                 assetImageUrl: assetImageUrl || null,
                 questions: processedQuestions,
-                author: 'unknown',
-                status: 'pending' as const,
+                author: authorName,
+                status: status,
             };
 
             let newId = '';
@@ -349,8 +379,11 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 console.log('Form Submitted to Firebase', { ...finalData, id: newId });
             }
 
-            queryClient.invalidateQueries({ queryKey: ['statistics'] });
-            queryClient.invalidateQueries({ queryKey: ['questions'] });
+            // Ensure cache is updated before navigating
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['statistics'] }),
+                queryClient.invalidateQueries({ queryKey: ['questions'] })
+            ]);
 
             // Close modal first to ensure clean state
             setIsPreviewOpen(false);
