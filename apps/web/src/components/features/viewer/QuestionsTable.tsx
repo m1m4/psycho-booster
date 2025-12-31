@@ -289,7 +289,6 @@ export function QuestionsTable({
                             quality: 0.95,
                             backgroundColor: '#ffffff',
                             pixelRatio: 1.5, // Reduced from 2.0 to save size, readable enough
-                            cacheBust: true
                         });
 
                         const imgProps = pdf.getImageProperties(dataUrl);
