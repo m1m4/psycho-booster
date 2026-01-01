@@ -1,8 +1,7 @@
 import { initializeApp } from "firebase/app";
-// import { getFirestore } from "firebase/firestore"; // Removed unused
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,10 +14,20 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-    })
-});
+
+let firestoreDb;
+try {
+    firestoreDb = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager()
+        })
+    });
+} catch (e) {
+    // If already initialized (e.g. via hot reload or another component), use existing instance
+    console.warn("Firestore already initialized, using existing instance");
+    firestoreDb = getFirestore(app);
+}
+
+export const db = firestoreDb;
 export const storage = getStorage(app);
 export const auth = getAuth(app);
