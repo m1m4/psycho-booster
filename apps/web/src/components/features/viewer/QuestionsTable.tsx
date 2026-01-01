@@ -315,7 +315,14 @@ export function QuestionsTable({
                 // --- 2. Questions ---
                 const questionElements = Array.from(document.querySelectorAll('.export-question-item'));
                 for (let i = 0; i < questionElements.length; i++) {
-                    await addElementToPdf(questionElements[i] as HTMLElement, 0); // Spacing handled by CSS margin capture
+                    const el = questionElements[i] as HTMLElement;
+                    await addElementToPdf(el, 0); // Spacing handled by CSS margin capture
+                    
+                    // Force Page Break if requested by the template
+                    if (el.dataset.breakAfter === 'true') {
+                        pdf.addPage();
+                        currentY = margin;
+                    }
                 }
 
                 // Force Page Break after Questions (Part 1 -> Part 2)
