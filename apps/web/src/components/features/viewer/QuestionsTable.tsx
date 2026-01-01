@@ -289,6 +289,7 @@ export function QuestionsTable({
                             quality: 0.95,
                             backgroundColor: '#ffffff',
                             pixelRatio: 1.5, // Reduced from 2.0 to save size, readable enough
+                            skipFonts: true, // Bypass font embedding to prevent "trim" errors in production
                         });
 
                         const imgProps = pdf.getImageProperties(dataUrl);
