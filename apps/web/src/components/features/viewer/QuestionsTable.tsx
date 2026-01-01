@@ -288,20 +288,59 @@ export function QuestionsTable({
                         const dataUrl = await toJpeg(element, {
                             quality: 0.95,
                             backgroundColor: '#ffffff',
-                            pixelRatio: 1.5, // Reduced from 2.0 to save size, readable enough
+                            pixelRatio: 2.5, // Increased from 1.5 for better quality in PDF export
                             cacheBust: true
                         });
 
                         const imgProps = pdf.getImageProperties(dataUrl);
-                        const imgHeight = (imgProps.height * contentWidth) / imgProps.width;
+                        let imgHeight = (imgProps.height * contentWidth) / imgProps.width;
+                        let finalWidth = contentWidth;
 
                         // Check for page break
                         if (currentY + imgHeight > pageHeight - margin) {
-                            pdf.addPage();
-                            currentY = margin;
+                            // Fix for "Orphaned Title" issue:
+                            // If we are near the top (e.g., just after title), and the image is just too big,
+                            // we try to scale it down to fit the first page instead of breaking.
+                            const availableSpace = pageHeight - margin - currentY;
+                            const isNearTop = currentY < pageHeight * 0.25; // First quarter of page (likely just title)
+                            
+                            // If we are near top, and scaling it down allows it to fit (with some reasonable limit e.g. 70% orig size)
+                            if (isNearTop && availableSpace > 50 && imgHeight > availableSpace) {
+                                // Check if scaling to available space is reasonable (e.g. not squashing it to a tiny line)
+                                const scaleFactor = availableSpace / imgHeight;
+                                // If we don't scale too aggressively (keep at least 65% size), do it.
+                                if (scaleFactor > 0.65) {
+                                    imgHeight = availableSpace;
+                                    // Recalculate width to maintain aspect ratio (optional, but PDF addImage typically takes w/h)
+                                    // Actually addImage stretches if we give both. We should adjust width to keep ratio?
+                                    // No, we usually want full width. If we shrink height, we should shrink width to keep ratio, or center it.
+                                    // Let's shrink width proportional to height to maintain aspect ratio.
+                                    finalWidth = contentWidth * scaleFactor;
+                                } else {
+                                     // Too big to fit even with scaling. We MUST break.
+                                     // But currentY > margin is true.
+                                     if (currentY > margin) {
+                                         pdf.addPage();
+                                         currentY = margin;
+                                         // If it still doesn't fit on a fresh page, we might need to scale it to fit the page
+                                         if (imgHeight > pageHeight - (margin * 2)) {
+                                             const maxPageHeight = pageHeight - (margin * 2);
+                                              const pageScale = maxPageHeight / imgHeight;
+                                              imgHeight = maxPageHeight;
+                                              finalWidth = contentWidth * pageScale;
+                                         }
+                                     }
+                                }
+                            } else if (currentY > margin) {
+                                // Normal break behavior
+                                pdf.addPage();
+                                currentY = margin;
+                            }
                         }
 
-                        pdf.addImage(dataUrl, 'JPEG', margin, currentY, contentWidth, imgHeight);
+                        // Center the image if width was reduced
+                        const xOffset = margin + (contentWidth - finalWidth) / 2;
+                        pdf.addImage(dataUrl, 'JPEG', xOffset, currentY, finalWidth, imgHeight);
                         currentY += imgHeight + spacingAfter;
                     } catch (err) {
                         console.warn('Skipped element export:', err);
@@ -318,16 +357,18 @@ export function QuestionsTable({
                     const el = questionElements[i] as HTMLElement;
                     await addElementToPdf(el, 0); // Spacing handled by CSS margin capture
                     
-                    // Force Page Break if requested by the template
-                    if (el.dataset.breakAfter === 'true') {
+                    // Force Page Break if requested by the template - only if not already top of page
+                    if (el.dataset.breakAfter === 'true' && currentY > margin) {
                         pdf.addPage();
                         currentY = margin;
                     }
                 }
 
-                // Force Page Break after Questions (Part 1 -> Part 2)
-                pdf.addPage();
-                currentY = margin;
+                // Force Page Break after Questions (Part 1 -> Part 2) - only if not already top of page
+                if (currentY > margin) {
+                    pdf.addPage();
+                    currentY = margin;
+                }
 
                 // --- 3. Answer Key ---
                 // We add a bit of spacing before the answer key if it's on the same page
