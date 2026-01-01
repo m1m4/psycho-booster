@@ -48,7 +48,7 @@ interface QuestionPreviewProps {
     };
     isEnglish: boolean;
     hideCorrectAnswer?: boolean;
-    viewMode?: 'full' | 'question_only' | 'explanation_only'; // Controlled view for PDF export steps
+    viewMode?: 'full' | 'question_only' | 'explanation_only' | 'asset_only'; // Controlled view for PDF export steps
     isExport?: boolean;
 }
 
@@ -149,7 +149,9 @@ export function QuestionPreview({ formData, isEnglish, hideCorrectAnswer = false
         formData.subcategory === 'reading_comprehension_verbal' ||
         formData.subcategory === 'reading_comprehension_eng';
 
-    const isAssetVisible = (!!showAssetData && isAssetRequiredSubcategory) || (!!showAssetData && isExport);
+    const isAssetVisible = (!!showAssetData && viewMode === 'asset_only') || 
+        ((!!showAssetData && isAssetRequiredSubcategory) && viewMode !== 'question_only' && viewMode !== 'explanation_only') || 
+        ((!!showAssetData && isExport) && viewMode !== 'question_only' && viewMode !== 'explanation_only');
     const isMultiQuestion = questions.length > 1;
     const isChartInference = formData.subcategory === 'chart_inference';
 
@@ -214,8 +216,8 @@ export function QuestionPreview({ formData, isEnglish, hideCorrectAnswer = false
                 ))}
             </div>
 
-            {/* Header info - Only show in full or question mode */}
-            {viewMode !== 'explanation_only' && (
+            {/* Header info - Only show in full or question mode, but hide for specific export questions */}
+            {viewMode !== 'explanation_only' && !(isExport && viewMode === 'question_only') && (
                 <div className="border-b border-gray-200 dark:border-gray-800 pb-2 mb-2 w-full flex items-center justify-between gap-4">
                     <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white whitespace-nowrap truncate">
                         {CATEGORY_LABELS[formData.category] || formData.category} - {
@@ -244,17 +246,18 @@ export function QuestionPreview({ formData, isEnglish, hideCorrectAnswer = false
             {/* Main Content Area */}
             <div className={`flex flex-col md:flex-row gap-8 ${isAssetVisible && isMultiQuestion ? 'w-full' : 'w-full mx-auto'}`}>
 
-                {/* Shared Assets - Only in full or question mode */}
-                {viewMode !== 'explanation_only' && isAssetVisible && (
-                    <div className={`w-full ${isMultiQuestion ? 'md:w-1/2' : 'mb-8'}`}>
+                {/* Shared Assets - Not in explanation_only or question_only */}
+                {viewMode !== 'explanation_only' && viewMode !== 'question_only' && isAssetVisible && (
+                    <div className={`w-full ${(isMultiQuestion && viewMode !== 'asset_only') ? 'md:w-1/2' : 'mb-8'}`}>
                         <div className="sticky top-4">
                             {renderAsset()}
                         </div>
                     </div>
                 )}
 
-                {/* Left Column: Question Tabs & Content */}
-                <div className={`w-full max-w-[800px] ${isAssetVisible && isMultiQuestion && viewMode !== 'explanation_only' ? 'md:w-1/2' : 'mx-auto'}`}>
+                {/* Left Column: Question Tabs & Content - Hide in asset_only */}
+                {viewMode !== 'asset_only' && (
+                <div className={`w-full max-w-[800px] ${isAssetVisible && isMultiQuestion ? 'md:w-1/2' : 'mx-auto'}`}>
 
                     {/* Tabs - Only if multi-question and not explanation mode (explanations will just list loop in parent usually, or we handle here) */}
                     {/* Actually for PDF export we usually iterate questions outside, so this component likely renders ONE question at a time if fed single item arrays, but here we feed the whole form data. */}
@@ -382,6 +385,7 @@ export function QuestionPreview({ formData, isEnglish, hideCorrectAnswer = false
                         )}
                     </div>
                 </div>
+                )}
             </div>
 
             <ImageLightbox
