@@ -90,7 +90,8 @@ export function PreviewRender({
                         textAlign: shouldBeRtl ? 'right' : 'left'
                     }}
                 />
-                <style jsx global>{`
+                <style dangerouslySetInnerHTML={{
+                    __html: `
                     .katex-display, .katex {
                         direction: ltr !important;
                         unicode-bidi: isolate !important;
@@ -104,7 +105,7 @@ export function PreviewRender({
                         display: inline-block;
                         white-space: nowrap;
                     }
-                `}</style>
+                ` }} />
             </div>
         </div>
     );

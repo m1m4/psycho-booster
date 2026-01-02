@@ -139,7 +139,8 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
                 </div>
             </div>
 
-            <style jsx>{`
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 8px;
                 }
@@ -150,7 +151,7 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
                     background-color: rgba(156, 163, 175, 0.5);
                     border-radius: 20px;
                 }
-            `}</style>
+            ` }} />
         </div>
     );
 }
