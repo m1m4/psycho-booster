@@ -14,7 +14,8 @@
         "deploytest": "npm run deploytest --workspace=web"
     },
     "devDependencies": {
-        "dotenv-cli": "^11.0.0"
+        "dotenv-cli": "^11.0.0",
+        "firebase-tools": "^15.1.0"
     },
     "dependencies": {
         "firebase": "^12.7.0"

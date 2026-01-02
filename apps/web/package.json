@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "export": "dotenv -e ../../.env -- next build --webpack",
-    "deploy": "npm run export && firebase deploy --only hosting --prefix ../..",
-    "deploytest": "npm run export && firebase hosting:channel:deploy test --prefix ../..",
+    "deploy": "npm run export && cd ../.. && firebase deploy --only hosting",
+    "deploytest": "npm run export && cd ../.. && firebase hosting:channel:deploy test",
     "dev:https": "dotenv -e ../../.env -- next dev --experimental-https -H 0.0.0.0 --webpack"
   },
   "dependencies": {
