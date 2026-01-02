@@ -2,79 +2,51 @@
 node_modules/
 .pnp
 .pnp.*
-.yarn/*
+.yarn/
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
 
-# Testing
-coverage/
-.nyc_output/
-*.lcov
-infra/workflows-backup/
-
-# Next.js
+# Build and Output
 .next/
 out/
-.vercel
-next-env.d.ts
-
-# Expo / React Native
-.expo/
-.expo-shared/
-dist/
-web-build/
-expo-env.d.ts
-metro-health-check*
-.metro-health-check*
-ios/
-android/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Build outputs
 build/
 dist/
+.vercel
+.turbo/
+.cache/
 *.tsbuildinfo
+.eslintcache
+.stylelintcache
 
-# Firebase build and deployment files
-/firebase-debug.log
-/firebase-debug.*.log
-.firebaserc
-*.cache
-hosting/.cache
-/functions/node_modules/
-/functions/.env
-/functions/package-lock.json
-/firebase-*.zip
-/.firebase/
-/emulator-ui/
-
-# Environment files
+# Environment and Secrets
 .env
 .env*.local
 .env.development.local
 .env.test.local
 .env.production.local
+.firebaserc
+*.pem
+*.key
+*.jks
+*.p8
+*.p12
+*.mobileprovision
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firebase-*.zip
+emulator-ui/
 
-# IDE / Editor
+# IDE and Editor
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
@@ -83,10 +55,8 @@ lerna-debug.log*
 .settings/
 *.sublime-project
 *.sublime-workspace
-.github
-.cursor/
 
-# OS
+# OS Files
 .DS_Store
 .DS_Store?
 ._*
@@ -96,22 +66,25 @@ ehthumbs.db
 Thumbs.db
 Desktop.ini
 
-# Monorepo
-.turbo/
-.cache/
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Misc
-*.pem
-.eslintcache
-.stylelintcache
-
-# PWA / Service Workers
-public/sw.js
-public/workbox-*.js
-public/worker-*.js
-public/fallback-*.js
-sw.js.map
-apps/web/public/sw.js
-
-# Native (Additional)
+infra/workflows-backup/
 .kotlin/
+**/sw.js
+**/workbox-*.js
+**/worker-*.js
+**/fallback-*.js
+**/swe-worker-*.js
+**/sw.js.map

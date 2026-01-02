@@ -1,6 +1,7 @@
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, getApp, getApps } from "firebase/app";
 import { getStorage } from "firebase/storage";
+import { getAuth } from "firebase/auth";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,7 +13,27 @@ const firebaseConfig = {
     measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// Singleton pattern for Firebase App
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+let firestoreDb;
+try {
+    // Check if we are in a browser environment before initializing persistent cache
+    if (typeof window !== "undefined") {
+        firestoreDb = initializeFirestore(app, {
+            localCache: persistentLocalCache({
+                tabManager: persistentMultipleTabManager()
+            })
+        });
+    } else {
+        firestoreDb = getFirestore(app);
+    }
+} catch (e) {
+    // If already initialized, use existing instance
+    firestoreDb = getFirestore(app);
+}
+
+export const db = firestoreDb;
 export const storage = getStorage(app);
+export const auth = getAuth(app);
 export default app;
