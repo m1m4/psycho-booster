@@ -13,8 +13,7 @@
       }
     ],
     "predeploy": [
-      "npm ci --prefix apps/web",
-      "npm run build --prefix apps/web"
+      "npm run build --workspace=web"
     ]
   },
   "firestore": {
