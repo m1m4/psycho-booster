@@ -12,15 +12,17 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
     minHeight?: string;
     /** Whether to auto-detect direction */
     autoDir?: boolean;
-    /** Whether to restrict to a single line */
+    /** Whether to restrict to a single line (prevents enter) */
     singleLine?: boolean;
+    /** Whether to disable word wrap but allow multiple lines via Enter */
+    noWrap?: boolean;
 }
 
 /**
  * A custom Textarea component that supports auto-height and real-time bold text highlighting (**text**).
  */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-    ({ className = '', label, error, onChange, value, minHeight = '120px', autoDir = true, singleLine = false, ...props }, ref) => {
+    ({ className = '', label, error, onChange, value, minHeight = '32px', autoDir = true, singleLine = false, noWrap = false, ...props }, ref) => {
         const textareaRef = useRef<HTMLTextAreaElement | null>(null);
         const highlightRef = useRef<HTMLDivElement | null>(null);
 
@@ -31,8 +33,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             if (singleLine) return;
             const element = textareaRef.current;
             if (element) {
+                // Reset height to auto to correctly shrink/grow
                 element.style.height = 'auto';
-                const newHeight = `${element.scrollHeight}px`;
+                const parsedMinHeight = parseInt(String(minHeight)) || 0;
+                const newHeight = `${Math.max(element.scrollHeight, parsedMinHeight)}px`;
                 element.style.height = newHeight;
                 if (highlightRef.current) {
                     highlightRef.current.style.height = newHeight;
@@ -42,6 +46,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
         useEffect(() => {
             adjustHeight();
+            // Double check after a small delay to handle layout shifts
+            const timer = setTimeout(adjustHeight, 10);
+            return () => clearTimeout(timer);
         }, [value]);
 
         /**
@@ -56,10 +63,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>**$1**</strong>')
+                // Removed automatic bold highlighting for **text**
                 .replace(/(\$\$?)([^\$]+?)(\$\$?)/g, (match, d1, content, d2) => {
-                    // Wrap LaTeX math in LTR span to prevent BiDi reordering of delimiters
-                    return `<span dir="ltr" style="unicode-bidi: isolate; display: inline-block;">${d1}${content}${d2}</span>`;
+                    // Wrap LaTeX math in a span without forcing flow/display changes to keep cursor aligned
+                    return `<span>${d1}${content}${d2}</span>`;
                 })
                 .replace(/\n/g, '<br/>');
         };
@@ -99,11 +106,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             lineHeight: '24px',
             fontSize: '16px',
             fontFamily: 'inherit',
-            padding: singleLine ? '10px 16px' : '12px 16px',
+            padding: (singleLine || noWrap) ? '4px 12px' : '8px 16px',
             margin: '0',
             border: 'none',
-            whiteSpace: singleLine ? 'nowrap' : 'pre-wrap',
-            overflowWrap: 'break-word',
+            whiteSpace: (singleLine || noWrap) ? 'pre' : 'pre-wrap', // Important for horizontal scroll
+            overflowWrap: (singleLine || noWrap) ? 'normal' : 'break-word',
             boxSizing: 'border-box',
             WebkitFontSmoothing: 'antialiased',
             MozOsxFontSmoothing: 'grayscale',
@@ -151,7 +158,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                             if (onChange) onChange(e);
                         }}
                         onScroll={handleScroll}
-                        rows={singleLine ? 1 : undefined}
+                        rows={singleLine ? 1 : (noWrap ? 1 : (props.rows || 1))}
                         className={`
                             relative w-full bg-transparent caret-black dark:caret-white
                             placeholder:text-gray-500 dark:placeholder:text-gray-400
@@ -160,26 +167,26 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                         `}
                         style={{
                             ...sharedStyles,
-                            height: singleLine ? minHeight : undefined,
+                            height: singleLine ? minHeight : 'auto', // Allow it to collapse to check scrollHeight 
                             minHeight: minHeight,
                             color: 'transparent',
                             WebkitTextFillColor: 'transparent',
                             WebkitTapHighlightColor: 'transparent',
+                            whiteSpace: (singleLine || noWrap) ? 'pre' : 'pre-wrap',
+                            overflowX: (singleLine || noWrap) ? 'auto' : 'hidden',
+                            overflowY: 'hidden',
                         }}
                         {...props}
+                        onInput={(e) => {
+                            adjustHeight();
+                            if (props.onInput) props.onInput(e);
+                        }}
                     />
                 </div>
                 {error && <p className="text-sm text-red-500">{error}</p>}
 
                 <style jsx>{`
-                    strong {
-                        font-weight: normal;
-                        color: inherit;
-                        /* Use a very subtle text-stroke for bolding to keep character widths identical */
-                        -webkit-text-stroke: 0.5px currentColor;
-                        paint-order: stroke fill;
-                        letter-spacing: -0.2px; /* Tiny adjustment to compensate for stroke-induced width */
-                    }
+                    /* Removed strong styles as bold highlighting is disabled */
                 `}</style>
             </div>
         );
@@ -187,4 +194,3 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 );
 
 Textarea.displayName = 'Textarea';
-

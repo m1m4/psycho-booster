@@ -7,9 +7,9 @@ import 'katex/dist/katex.min.css';
 import renderMathInElement from 'katex/dist/contrib/auto-render';
 
 /**
- * Props for the LatexPreview component.
+ * Props for the PreviewRender component.
  */
-interface LatexPreviewProps {
+interface PreviewRenderProps {
     /** The content (text and/or LaTeX) to render */
     content: string;
     /** Accessibility label (unused in current render) */
@@ -28,12 +28,12 @@ const hasHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
  * A component that renders LaTeX and markdown-style bold text using KaTeX.
  * Supports inline ($...$) and block ($$...$$) math delimiters.
  */
-export function LatexPreview({
+export function PreviewRender({
     content,
     placeholder,
     minimal = false,
     isEnglish = false
-}: LatexPreviewProps) {
+}: PreviewRenderProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const defaultPlaceholder = isEnglish ? "No content to display" : "אין תוכן להצגה";
     const actualPlaceholder = placeholder || defaultPlaceholder;

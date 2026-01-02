@@ -1,15 +1,16 @@
 export interface QuestionItem {
     id: number;
     questionText: string;
-    questionImage: File | null;
+    questionImage: File | string | null;
+    answersMode: 'text' | 'image';
     answer1: string;
-    answer1Image: File | null;
+    answer1Image: File | string | null;
     answer2: string;
-    answer2Image: File | null;
+    answer2Image: File | string | null;
     answer3: string;
-    answer3Image: File | null;
+    answer3Image: File | string | null;
     answer4: string;
-    answer4Image: File | null;
+    answer4Image: File | string | null;
     correctAnswer: string;
     explanation: string;
     difficulty: string;
@@ -19,6 +20,7 @@ export const DEFAULT_QUESTION: QuestionItem = {
     id: 1,
     questionText: '',
     questionImage: null,
+    answersMode: 'text',
     answer1: '',
     answer1Image: null,
     answer2: '',
@@ -96,3 +98,39 @@ export const TOPIC_OPTIONS: Record<string, { label: string; value: string }[]> =
         { label: 'מערכת צירים', value: 'coord_system' },
     ],
 };
+
+export interface SavedQuestionItem extends Omit<QuestionItem, 'questionImage' | 'answer1Image' | 'answer2Image' | 'answer3Image' | 'answer4Image'> {
+    questionImageUrl: string | null;
+    answer1ImageUrl: string | null;
+    answer2ImageUrl: string | null;
+    answer3ImageUrl: string | null;
+    answer4ImageUrl: string | null;
+}
+
+export interface QuestionSet {
+    id: string; // Auto-generated ID
+    category: string;
+    subcategory: string;
+    topic?: string;
+    difficulty: string; // Added for sorting
+    assetText?: string;
+    assetImageUrl?: string | null;
+    questions: SavedQuestionItem[]; // Using SavedQuestionItem
+    author: string;
+    status: 'draft' | 'pending' | 'initial' | 'approved';
+    createdAt?: any; // Firestore Timestamp
+}
+
+
+export interface QuestionFilters {
+    startDate?: Date | null;
+    endDate?: Date | null;
+    timeRange?: 'all' | 'today' | 'lastWeek' | 'lastMonth'; // UI helper
+    creator?: string;
+    status?: string;
+    category?: string;
+    subcategory?: string | string[];
+    topic?: string | string[];
+    difficulty?: string;
+    excludeAuthor?: string;
+}

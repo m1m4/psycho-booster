@@ -12,6 +12,7 @@ node_modules/
 coverage/
 .nyc_output/
 *.lcov
+infra/workflows-backup/
 
 # Next.js
 .next/
@@ -26,6 +27,7 @@ dist/
 web-build/
 expo-env.d.ts
 metro-health-check*
+.metro-health-check*
 ios/
 android/
 *.orig.*
@@ -101,3 +103,14 @@ Desktop.ini
 *.pem
 .eslintcache
 .stylelintcache
+
+# PWA / Service Workers
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
+public/fallback-*.js
+sw.js.map
+apps/web/public/sw.js
+
+# Native (Additional)
+.kotlin/

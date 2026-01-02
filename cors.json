@@ -1,0 +1,13 @@
+[
+    {
+        "origin": [
+            "http://localhost:3000",
+            "https://localhost:3000",
+            "https://psycho-booster--test-kgi40grg.web.app"
+        ],
+        "method": [
+            "GET"
+        ],
+        "maxAgeSeconds": 3600
+    }
+]

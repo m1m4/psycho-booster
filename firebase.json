@@ -13,8 +13,11 @@
       }
     ],
     "predeploy": [
-      "npm ci --prefix apps/web",
-      "npm run build --prefix apps/web"
+      "cd apps/web && npm run build"
     ]
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   }
 }

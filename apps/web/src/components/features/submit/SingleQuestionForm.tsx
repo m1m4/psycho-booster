@@ -1,9 +1,10 @@
 import React from 'react';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { LatexPreview } from '@/components/ui/LatexPreview';
+import { PreviewRender } from '@/components/ui/PreviewRender';
 import { CameraIcon, XIcon } from './SubmitIcons';
 import { AnswersList } from './AnswersList';
+import { QuestionPreview, useResponsiveFontSize, hasHebrew } from './QuestionPreview';
 import { QuestionItem } from '@/types/submit';
 
 interface SingleQuestionFormProps {
@@ -37,10 +38,15 @@ export function SingleQuestionForm({
 }: SingleQuestionFormProps) {
     if (!question) return null;
 
+    const scrollOnFocus = (e: React.FocusEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+        // Scroll the element into view with a bit of padding at the top
+        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
     return (
         <div
             id="question-form-container"
-            className="flex-1 bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl space-y-6 border border-gray-200 dark:border-gray-800 scroll-mt-20"
+            className="flex-1 space-y-6 scroll-mt-20"
             dir={isEnglish ? 'ltr' : 'rtl'}
         >
             <div className="flex justify-between items-center gap-4">
@@ -54,9 +60,9 @@ export function SingleQuestionForm({
                     <Select
                         id={`q${activeQuestionIndex}-difficulty`}
                         options={[
-                            { label: 'קל', value: 'easy' },
+                            { label: 'נמוך', value: 'easy' },
                             { label: 'בינוני', value: 'medium' },
-                            { label: 'קשה', value: 'hard' },
+                            { label: 'גבוה', value: 'hard' },
                         ]}
                         placeholder="רמה..."
                         value={question.difficulty}
@@ -72,13 +78,26 @@ export function SingleQuestionForm({
                 id={`q${activeQuestionIndex}-text`}
                 value={question.questionText}
                 onChange={(e) => handleQuestionChange('questionText', e.target.value)}
+                onFocus={scrollOnFocus}
                 placeholder={isEnglish ? 'Type question here...' : 'הקלד את השאלה כאן...'}
                 dir={isEnglish ? 'ltr' : undefined}
                 disabled={!isSubCategorySelected}
                 error={formErrors[`q${activeQuestionIndex}-text`] ? ' ' : undefined}
+                className={useResponsiveFontSize(question.questionText)}
+                rows={4}
             />
             {showLatex && (
-                <LatexPreview content={question.questionText} isEnglish={isEnglish} />
+                <div className="mt-4">
+                    <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 px-1">
+                        {isEnglish ? 'Question Preview' : 'תצוגה מקדימה לשאלה'}
+                    </div>
+                    <div
+                        className={`p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800/50 ${useResponsiveFontSize(question.questionText)} font-normal text-gray-900 dark:text-white whitespace-pre-wrap ${isEnglish && !hasHebrew(question.questionText) ? 'text-left' : 'text-right'}`}
+                        dir={isEnglish && !hasHebrew(question.questionText) ? 'ltr' : 'rtl'}
+                    >
+                        <PreviewRender content={question.questionText} minimal isEnglish={isEnglish} />
+                    </div>
+                </div>
             )}
 
             {!isQuestionSet && (
@@ -91,7 +110,7 @@ export function SingleQuestionForm({
                         {question.questionImage ? (
                             <div className="relative w-full h-full flex items-center justify-center p-2">
                                 <img
-                                    src={URL.createObjectURL(question.questionImage as File)}
+                                    src={typeof question.questionImage === 'string' ? question.questionImage : URL.createObjectURL(question.questionImage as File)}
                                     className="max-w-full max-h-[400px] object-contain rounded-lg"
                                     alt="Question Content"
                                 />
@@ -142,6 +161,7 @@ export function SingleQuestionForm({
                 showLatex={showLatex}
                 errors={formErrors}
                 labels={labels}
+                onFocus={scrollOnFocus}
             />
 
             <div dir={isEnglish ? 'ltr' : 'rtl'}>
@@ -150,12 +170,27 @@ export function SingleQuestionForm({
                     label={labels.explanation}
                     value={question.explanation}
                     onChange={(e) => handleQuestionChange('explanation', e.target.value)}
+                    onFocus={scrollOnFocus}
                     placeholder={isEnglish ? 'Explain why the correct answer is correct...' : 'הסבר מדוע התשובה הנכונה היא נכונה...'}
                     dir={isEnglish ? 'ltr' : 'rtl'}
                     disabled={!isSubCategorySelected}
                     error={formErrors[`q${activeQuestionIndex}-explanation`] ? ' ' : undefined}
+                    className={useResponsiveFontSize(question.explanation)}
+                    rows={4}
                 />
-                {showLatex && <LatexPreview content={question.explanation} isEnglish={isEnglish} />}
+                {showLatex && (
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+                            {isEnglish ? 'Explanation Preview' : 'תצוגה מקדימה להסבר'}
+                        </h4>
+                        <div
+                            className={`p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800/50 text-gray-600 dark:text-gray-400 ${useResponsiveFontSize(question.explanation)} ${isEnglish && !hasHebrew(question.explanation) ? 'text-left' : 'text-right'}`}
+                            dir={isEnglish && !hasHebrew(question.explanation) ? 'ltr' : 'rtl'}
+                        >
+                            <PreviewRender content={question.explanation} minimal isEnglish={isEnglish} />
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
