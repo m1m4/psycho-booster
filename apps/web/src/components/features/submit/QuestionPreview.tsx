@@ -164,7 +164,7 @@ export function QuestionPreview({ formData, isEnglish, hideCorrectAnswer = false
             <PreviewImage
                 src={assetSrc}
                 alt="Asset"
-                className="max-h-60 h-auto w-auto object-contain rounded-lg mb-4 mx-auto cursor-zoom-in hover:opacity-90 transition-opacity shadow-md"
+                className={`${isExport ? 'max-h-none h-auto w-full' : 'max-h-60 h-auto w-auto'} object-contain rounded-lg mb-4 mx-auto cursor-zoom-in hover:opacity-90 transition-opacity shadow-md`}
                 onClick={setLightboxImage}
                 title="Click to zoom"
                 useCors={isExport}
