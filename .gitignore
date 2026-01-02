@@ -82,9 +82,9 @@ lerna-debug.log*
 # Misc
 infra/workflows-backup/
 .kotlin/
-**/public/sw.js
-**/public/workbox-*.js
-**/public/worker-*.js
-**/public/fallback-*.js
-**/public/swe-worker-*.js
-sw.js.map
+**/sw.js
+**/workbox-*.js
+**/worker-*.js
+**/fallback-*.js
+**/swe-worker-*.js
+**/sw.js.map
