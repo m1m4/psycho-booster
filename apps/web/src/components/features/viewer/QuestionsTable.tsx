@@ -288,8 +288,8 @@ export function QuestionsTable({
                         const dataUrl = await toJpeg(element, {
                             quality: 0.95,
                             backgroundColor: '#ffffff',
-                            pixelRatio: 2.5, // Increased from 1.5 for better quality in PDF export
-                            cacheBust: true
+                            pixelRatio: 1.5, // Reduced from 2.0 to save size, readable enough
+                            skipFonts: true, // Bypass font embedding to prevent "trim" errors in production
                         });
 
                         const imgProps = pdf.getImageProperties(dataUrl);
