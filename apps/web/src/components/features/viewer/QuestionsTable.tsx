@@ -155,19 +155,19 @@ export function QuestionsTable({
 
     const difficultyColor = (difficulty: string) => {
         switch (difficulty) {
-            case 'easy': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-            case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-            case 'hard': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400';
+            case 'easy': return 'bg-green-100 text-green-800';
+            case 'medium': return 'bg-yellow-100 text-yellow-800';
+            case 'hard': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
     const statusBadge = (status: string) => {
         switch (status) {
-            case 'pending': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
-            case 'initial': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-            case 'approved': return 'bg-green-600 text-white dark:bg-green-700';
-            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400';
+            case 'pending': return 'bg-orange-100 text-orange-800';
+            case 'initial': return 'bg-blue-100 text-blue-800';
+            case 'approved': return 'bg-green-600 text-white';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -223,14 +223,14 @@ export function QuestionsTable({
 
             if (link) {
                 return (
-                    <div className="flex flex-col items-center gap-4 bg-blue-50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-800">
-                        <div className="flex items-center gap-3 text-blue-800 dark:text-blue-300">
+                    <div className="flex flex-col items-center gap-4 bg-blue-50 p-6 rounded-2xl border border-blue-100">
+                        <div className="flex items-center gap-3 text-blue-800">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <span className="font-bold text-lg">נדרש אינדקס חדש עבור שאילתה זו</span>
                         </div>
-                        <p className="text-sm text-blue-600 dark:text-blue-400 text-center max-w-md">
+                        <p className="text-sm text-blue-600 text-center max-w-md">
                             פיירבייס דורש יצירת אינדקס מיוחד כדי לשלב את המסננים שבחרת עם המיון הנוכחי. השגנו עבורך את הקישור הישיר:
                         </p>
                         <a
@@ -303,7 +303,7 @@ export function QuestionsTable({
                             // we try to scale it down to fit the first page instead of breaking.
                             const availableSpace = pageHeight - margin - currentY;
                             const isNearTop = currentY < pageHeight * 0.25; // First quarter of page (likely just title)
-                            
+
                             // If we are near top, and scaling it down allows it to fit (with some reasonable limit e.g. 70% orig size)
                             if (isNearTop && availableSpace > 50 && imgHeight > availableSpace) {
                                 // Check if scaling to available space is reasonable (e.g. not squashing it to a tiny line)
@@ -317,19 +317,19 @@ export function QuestionsTable({
                                     // Let's shrink width proportional to height to maintain aspect ratio.
                                     finalWidth = contentWidth * scaleFactor;
                                 } else {
-                                     // Too big to fit even with scaling. We MUST break.
-                                     // But currentY > margin is true.
-                                     if (currentY > margin) {
-                                         pdf.addPage();
-                                         currentY = margin;
-                                         // If it still doesn't fit on a fresh page, we might need to scale it to fit the page
-                                         if (imgHeight > pageHeight - (margin * 2)) {
-                                             const maxPageHeight = pageHeight - (margin * 2);
-                                              const pageScale = maxPageHeight / imgHeight;
-                                              imgHeight = maxPageHeight;
-                                              finalWidth = contentWidth * pageScale;
-                                         }
-                                     }
+                                    // Too big to fit even with scaling. We MUST break.
+                                    // But currentY > margin is true.
+                                    if (currentY > margin) {
+                                        pdf.addPage();
+                                        currentY = margin;
+                                        // If it still doesn't fit on a fresh page, we might need to scale it to fit the page
+                                        if (imgHeight > pageHeight - (margin * 2)) {
+                                            const maxPageHeight = pageHeight - (margin * 2);
+                                            const pageScale = maxPageHeight / imgHeight;
+                                            imgHeight = maxPageHeight;
+                                            finalWidth = contentWidth * pageScale;
+                                        }
+                                    }
                                 }
                             } else if (currentY > margin) {
                                 // Normal break behavior
@@ -356,7 +356,7 @@ export function QuestionsTable({
                 for (let i = 0; i < questionElements.length; i++) {
                     const el = questionElements[i] as HTMLElement;
                     await addElementToPdf(el, 0); // Spacing handled by CSS margin capture
-                    
+
                     // Force Page Break if requested by the template - only if not already top of page
                     if (el.dataset.breakAfter === 'true' && currentY > margin) {
                         pdf.addPage();
@@ -436,9 +436,9 @@ export function QuestionsTable({
             )}
 
             {/* Header / Table Tools */}
-            <div className="flex justify-between items-center bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                 <div className="flex items-center gap-4">
-                    <h3 className="font-bold text-lg text-gray-800 dark:text-white">
+                    <h3 className="font-bold text-lg text-gray-800">
                         {title}
                         {totalCount > 0 && (
                             <span className="mr-2 text-blue-600 font-medium">({totalCount})</span>
@@ -456,7 +456,7 @@ export function QuestionsTable({
                     <button
                         onClick={handleExport}
                         disabled={selectedIds.size === 0 || isExporting}
-                        className={`p-2 rounded-lg transition-all ${selectedIds.size > 0 ? 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}
+                        className={`p-2 rounded-lg transition-all ${selectedIds.size > 0 ? 'text-blue-600 hover:bg-blue-50 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}
                         title={selectedIds.size > 0 ? 'ייצוא ל-PDF' : 'בחר פריטים לייצוא'}
                     >
                         {isExporting ? (
@@ -470,7 +470,7 @@ export function QuestionsTable({
                     {/* Add Button */}
                     {showAddButton && (
                         <button
-                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded-lg transition-all"
+                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                             title="הוספת שאלה חדשה"
                             onClick={() => window.location.href = '/submit'}
                         >
@@ -484,7 +484,7 @@ export function QuestionsTable({
                     {showFilterPanel && (
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className={`p-2 rounded-lg transition-all ${showFilters || Object.keys(filters).length > 0 ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                            className={`p-2 rounded-lg transition-all ${showFilters || Object.keys(filters).length > 0 ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
                             title="סינון"
                         >
                             <svg className="w-6 h-6 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -497,7 +497,7 @@ export function QuestionsTable({
                     <button
                         onClick={handleBulkDelete}
                         disabled={selectedIds.size === 0 || isDeleting}
-                        className={`p-2 rounded-lg transition-all ${selectedIds.size > 0 ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}
+                        className={`p-2 rounded-lg transition-all ${selectedIds.size > 0 ? 'text-red-500 hover:bg-red-50 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}
                         title={selectedIds.size > 0 ? 'מחק נבחרים' : 'בחר פריטים למחיקה'}
                     >
                         {isDeleting ? (
@@ -514,7 +514,7 @@ export function QuestionsTable({
                         <button
                             onClick={handleBulkApprove}
                             disabled={selectedIds.size === 0 || isDeleting}
-                            className={`p-2 rounded-lg transition-all ${selectedIds.size > 0 ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}
+                            className={`p-2 rounded-lg transition-all ${selectedIds.size > 0 ? 'text-green-600 hover:bg-green-50 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}
                             title={selectedIds.size > 0 ? 'אישור נבחרים' : 'בחר פריטים לאישור'}
                         >
                             {isDeleting ? (
@@ -529,10 +529,10 @@ export function QuestionsTable({
                 </div>
             </div>
 
-            <div className="w-full overflow-hidden border border-gray-200 dark:border-gray-800 rounded-xl bg-white dark:bg-black shadow-sm">
+            <div className="w-full overflow-hidden border border-gray-200 rounded-xl bg-white shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-center">
-                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-800 font-medium">
+                        <thead className="bg-gray-50 text-gray-900 border-b border-gray-200 font-medium">
                             <tr>
                                 <th className="px-4 py-4 w-[5%] font-medium text-gray-400">
                                     בחר
@@ -549,7 +549,7 @@ export function QuestionsTable({
                                     <th
                                         key={col.key}
                                         onClick={() => handleSort(col.key)}
-                                        className={`px-6 py-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors select-none text-center ${col.width}`}
+                                        className={`px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors select-none text-center ${col.width}`}
                                     >
                                         <div className="flex items-center justify-center gap-2">
                                             {col.label}
@@ -561,7 +561,7 @@ export function QuestionsTable({
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                        <tbody className="divide-y divide-gray-200">
 
                             {isLoading ? (
                                 <tr>
@@ -575,14 +575,14 @@ export function QuestionsTable({
                                 </tr>
                             ) : questionsToDisplay.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="p-8 text-center text-gray-500 dark:text-gray-400">לא נמצאו שאלות</td>
+                                    <td colSpan={10} className="p-8 text-center text-gray-500">לא נמצאו שאלות</td>
                                 </tr>
                             ) : (
                                 questionsToDisplay.map((q) => (
                                     <tr
                                         key={q.id}
                                         onClick={() => handleRowClick(q as QuestionSet)}
-                                        className={`hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors text-center cursor-pointer ${selectedIds.has(q.id) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                                        className={`hover:bg-gray-50 transition-colors text-center cursor-pointer ${selectedIds.has(q.id) ? 'bg-blue-50/50' : ''}`}
                                     >
                                         <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                                             <input

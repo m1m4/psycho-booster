@@ -39,11 +39,11 @@ export function AnswersList({
         <div>
             <div className="flex justify-between items-center mb-4">
                 <h3 className={`text-lg font-medium ${isEnglish ? 'text-left' : ''}`}>{labels.answers}</h3>
-                <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                <div className="flex bg-gray-100 p-1 rounded-lg">
                     <button
                         type='button'
                         onClick={() => handleQuestionChange('answersMode', 'text')}
-                        className={`px-3 py-1 text-sm rounded-md transition-all ${!isImageMode ? 'bg-white dark:bg-gray-700 shadow-sm font-medium' : 'text-gray-500'}`}
+                        className={`px-3 py-1 text-sm rounded-md transition-all ${!isImageMode ? 'bg-white shadow-sm font-medium' : 'text-gray-500'}`}
                         disabled={!isSubCategorySelected}
                     >
                         טקסט
@@ -51,7 +51,7 @@ export function AnswersList({
                     <button
                         type='button'
                         onClick={() => handleQuestionChange('answersMode', 'image')}
-                        className={`px-3 py-1 text-sm rounded-md transition-all ${isImageMode ? 'bg-white dark:bg-gray-700 shadow-sm font-medium' : 'text-gray-500'}`}
+                        className={`px-3 py-1 text-sm rounded-md transition-all ${isImageMode ? 'bg-white shadow-sm font-medium' : 'text-gray-500'}`}
                         disabled={!isSubCategorySelected}
                     >
                         תמונה
@@ -78,8 +78,8 @@ export function AnswersList({
                                             ${isCorrect
                                                 ? 'border-green-500 bg-green-500'
                                                 : hasSelection
-                                                    ? 'border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10' // Slight red tint for wrong answers
-                                                    : 'border-gray-200 dark:border-gray-800 hover:border-green-500'}
+                                                    ? 'border-red-200 bg-red-50' // Slight red tint for wrong answers
+                                                    : 'border-gray-200 hover:border-green-500'}
                                             ${!isSubCategorySelected ? 'opacity-50 cursor-not-allowed' : ''}
                                         `}
                                     >
@@ -95,8 +95,8 @@ export function AnswersList({
                                                 onFocus={onFocus}
                                                 className={`transition-all ${useResponsiveFontSize("a".repeat(Math.max((question.answer1 || "").length, (question.answer2 || "").length, (question.answer3 || "").length, (question.answer4 || "").length)))} ${hasSelection
                                                     ? isCorrect
-                                                        ? 'border-2 border-green-500 bg-green-50/5 dark:bg-green-500/10'
-                                                        : 'border-2 border-red-500 bg-red-100/10 dark:bg-red-900/20' // Bolder red for wrong answers
+                                                        ? 'border-2 border-green-500 bg-green-50/5'
+                                                        : 'border-2 border-red-500 bg-red-100/10' // Bolder red for wrong answers
                                                     : ''
                                                     }`}
                                                 dir={isEnglish ? 'ltr' : undefined}
@@ -106,12 +106,12 @@ export function AnswersList({
                                         ) : (
                                             // Image Mode
                                             <div className={`
-                                                flex-1 relative rounded-lg border overflow-hidden bg-white dark:bg-black p-1 transition-all h-[42px] flex items-center
+                                                flex-1 relative rounded-lg border overflow-hidden bg-white p-1 transition-all h-[42px] flex items-center
                                                 ${hasSelection
                                                     ? isCorrect
                                                         ? 'border-2 border-green-500 bg-green-50/5'
                                                         : 'border-2 border-red-500 bg-red-100/10'
-                                                    : 'border-gray-200 dark:border-gray-800'
+                                                    : 'border-gray-200'
                                                 }
                                             `}>
                                                 {answerImageValue ? (
@@ -121,6 +121,11 @@ export function AnswersList({
                                                             className="h-full w-auto object-contain mx-auto"
                                                             alt=""
                                                         />
+                                                        {answerImageValue instanceof File && (
+                                                            <div className="absolute bottom-0.5 left-1 text-gray-400 text-[8px] font-bold">
+                                                                {(answerImageValue.size / 1024).toFixed(0)}K
+                                                            </div>
+                                                        )}
                                                         <button
                                                             type="button"
                                                             onClick={() => handleImageChange(answerImageKey, null)}
@@ -163,22 +168,22 @@ export function AnswersList({
                                             className={`
                                                 flex items-center gap-2 p-3 rounded-xl border transition-all
                                                 ${isCorrect
-                                                    ? 'border-green-500 bg-green-50/50 dark:bg-green-900/10 ring-1 ring-green-500/20 shadow-lg shadow-green-500/5'
-                                                    : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40'}
+                                                    ? 'border-green-500 bg-green-50/50 ring-1 ring-green-500/20 shadow-lg shadow-green-500/5'
+                                                    : 'border-gray-200 bg-white'}
                                             `}
                                         >
                                             <div className={`
                                                 w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold shrink-0 border
                                                 ${isCorrect
                                                     ? 'bg-green-500 border-green-500 text-white shadow-sm'
-                                                    : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500'}
+                                                    : 'bg-gray-100 border-gray-200 text-gray-500'}
                                             `}>
                                                 {num}
                                             </div>
 
                                             <div className="flex-1 min-w-0">
                                                 <div
-                                                    className={`${useResponsiveFontSize("a".repeat(Math.max((question.answer1 || "").length, (question.answer2 || "").length, (question.answer3 || "").length, (question.answer4 || "").length)))} font-medium text-gray-800 dark:text-gray-200 ${isEnglish && !hasHebrew(answerValue || '') ? 'text-left' : 'text-right'}`}
+                                                    className={`${useResponsiveFontSize("a".repeat(Math.max((question.answer1 || "").length, (question.answer2 || "").length, (question.answer3 || "").length, (question.answer4 || "").length)))} font-medium text-gray-800 ${isEnglish && !hasHebrew(answerValue || '') ? 'text-left' : 'text-right'}`}
                                                     dir={isEnglish && !hasHebrew(answerValue || '') ? 'ltr' : 'rtl'}
                                                 >
                                                     <PreviewRender content={answerValue || '-'} minimal isEnglish={isEnglish} />
@@ -186,7 +191,7 @@ export function AnswersList({
                                             </div>
 
                                             {isCorrect && (
-                                                <div className="text-green-600 dark:text-green-400 shrink-0 bg-green-100 dark:bg-green-900/30 p-1.5 rounded-lg">
+                                                <div className="text-green-600 shrink-0 bg-green-100 p-1.5 rounded-lg">
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                                     </svg>

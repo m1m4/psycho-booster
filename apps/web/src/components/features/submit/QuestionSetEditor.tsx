@@ -8,9 +8,12 @@ import { QuestionTabs } from '@/components/features/submit/QuestionTabs';
 import { SingleQuestionForm } from '@/components/features/submit/SingleQuestionForm';
 import { QuestionModal } from '@/components/features/submit/QuestionModal';
 import { uploadFile } from '@/lib/firebase/upload';
-import { saveQuestionSet, updateQuestionSet } from '@/lib/firebase/db';
+import { saveQuestionSet, updateQuestionSet, getUserApiKey, saveUserApiKey, getGlobalPrompts, saveGlobalPrompts } from '@/lib/firebase/db';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { compressImage } from '@/lib/utils/image-compression';
+import { AIControlPanel } from '@/components/features/submit/AI/AIControlPanel';
+import { generateQuestions } from '@/lib/ai/gemini';
 
 interface QuestionSetEditorProps {
     initialData?: Partial<QuestionSet> | null;
@@ -21,13 +24,16 @@ interface FormDataState {
     category: string;
     subcategory: string;
     topic: string;
+    difficulty: string;
     assetFile: File | null;
+    assetImageUrl?: string | null;
     assetText: string;
     questions: QuestionItem[];
     [key: string]: any;
 }
 
 export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorProps) {
+    const { user } = useAuth();
     const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -35,6 +41,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
         category: initialData?.category || '',
         subcategory: initialData?.subcategory || '',
         topic: initialData?.topic || '',
+        difficulty: initialData?.difficulty || '',
         assetFile: null,
         assetText: initialData?.assetText || '',
         ...(initialData as any),
@@ -52,6 +59,97 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
 
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
     const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
+
+    // AI State
+    const [aiApiKey, setAiApiKey] = useState('');
+    const [globalPrompts, setGlobalPrompts] = useState({ base_prompt: '', categories: {} });
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    // Fetch user preferences and prompts
+    useEffect(() => {
+        if (user?.email) {
+            getUserApiKey(user.email).then(key => {
+                if (key) setAiApiKey(key);
+            });
+        }
+        getGlobalPrompts().then(prompts => {
+            if (prompts) setGlobalPrompts(prompts as any);
+        });
+    }, [user?.email]);
+
+    const handleSaveApiKey = async (key: string) => {
+        if (user?.email) {
+            await saveUserApiKey(user.email, key);
+            setAiApiKey(key);
+        }
+    };
+
+    const handleSaveGlobalPrompts = async (prompts: any) => {
+        await saveGlobalPrompts(prompts);
+        setGlobalPrompts(prompts);
+    };
+
+    const handleGenerate = async (instructions: string) => {
+        if (!aiApiKey) {
+            alert("No API Key found. Please configure it in settings.");
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            // Determine relevant context prompt key
+            let contextKey = formData.category;
+            if (formData.subcategory) contextKey += `_${formData.subcategory}`;
+            if (formData.topic && formData.category === 'quantitative') contextKey += `_${formData.topic}`;
+
+            const contextPrompt = (globalPrompts.categories as any)[contextKey] || '';
+            const basePrompt = globalPrompts.base_prompt || '';
+
+            const generatedQuestions = await generateQuestions({
+                apiKey: aiApiKey,
+                instructions,
+                basePrompt,
+                contextPrompt,
+                category: formData.category,
+                subcategory: formData.subcategory,
+                topic: formData.topic
+            });
+
+            // Merge questions: If only default question exists, replace it. Otherwise append.
+            setFormData(prev => {
+                const currentQuestions = prev.questions;
+                const isOnlyDefault = currentQuestions.length === 1 &&
+                    !currentQuestions[0].questionText &&
+                    !currentQuestions[0].answer1;
+
+                let newQuestions;
+                if (isOnlyDefault) {
+                    newQuestions = generatedQuestions;
+                } else {
+                    // Update IDs to continue from current count
+                    const startId = currentQuestions.length + 1;
+                    const reindexedGenerated = generatedQuestions.map((q, i) => ({
+                        ...q,
+                        id: startId + i
+                    }));
+                    newQuestions = [...currentQuestions, ...reindexedGenerated];
+                }
+
+                return { ...prev, questions: newQuestions };
+            });
+
+            // Ensure first question is active if we replaced
+            if (formData.questions.length <= 1) {
+                setActiveQuestionIndex(0);
+            }
+
+        } catch (error) {
+            console.error("Generation error:", error);
+            alert("Failed to generate questions. check console and API key.");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     useEffect(() => {
         if (initialData) {
@@ -109,7 +207,18 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
 
     const handleMetadataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        setFormData((prev) => {
+            const newState = { ...prev, [name]: value };
+
+            // If it's a single question and we're changing the top-level difficulty, sync with question
+            if (name === 'difficulty' && !isQuestionSet) {
+                newState.questions = prev.questions.map((q, idx) =>
+                    idx === 0 ? { ...q, difficulty: value } : q
+                );
+            }
+
+            return newState;
+        });
     };
 
     const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -130,9 +239,16 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
         setActiveQuestionIndex(0);
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setFormData((prev) => ({ ...prev, assetFile: e.target.files![0] }));
+            try {
+                const compressed = await compressImage(e.target.files[0]);
+                setFormData((prev) => ({ ...prev, assetFile: compressed }));
+            } catch (error) {
+                console.error("Compression failed:", error);
+                // Fallback to original if compression fails
+                setFormData((prev) => ({ ...prev, assetFile: e.target.files![0] }));
+            }
         }
     };
 
@@ -154,17 +270,27 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
         });
     };
 
-    const handleImageChange = (field: keyof QuestionItem, file: File | null) => {
+    const handleImageChange = async (field: keyof QuestionItem, file: File | null) => {
+        let finalFile = file;
+
+        if (file) {
+            try {
+                finalFile = await compressImage(file);
+            } catch (error) {
+                console.error("Compression failed:", error);
+            }
+        }
+
         setFormData(prev => {
             const newQuestions = [...prev.questions];
             const currentQ = { ...newQuestions[activeQuestionIndex] };
 
-            if (file && (field === 'answer1Image' || field === 'answer2Image' || field === 'answer3Image' || field === 'answer4Image')) {
+            if (finalFile && (field === 'answer1Image' || field === 'answer2Image' || field === 'answer3Image' || field === 'answer4Image')) {
                 const textField = field.replace('Image', '') as keyof QuestionItem;
                 (currentQ as any)[textField] = '';
             }
 
-            (currentQ as any)[field] = file;
+            (currentQ as any)[field] = finalFile;
             newQuestions[activeQuestionIndex] = currentQ;
             return { ...prev, questions: newQuestions };
         });
@@ -187,7 +313,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
         });
     };
 
-    const { user } = useAuth(); // Get authenticated user
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -223,6 +349,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
 
         if (!formData.category) setError('category-select');
         if (!formData.subcategory) setError('subcategory-select');
+        if (!formData.difficulty) setError('difficulty-select');
         if (formData.category === 'quantitative' && !formData.topic && formData.subcategory !== 'chart_inference') {
             setError('topic-select');
         }
@@ -321,7 +448,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 };
             }));
 
-            const overallDifficulty = processedQuestions.length > 0 ? processedQuestions[0].difficulty : 'medium';
+            const overallDifficulty = formData.difficulty;
 
             // Determine Author - Preserve original author unless it's 'unknown' or 'AI'
             let authorName = 'unknown';
@@ -360,7 +487,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 category: formData.category,
                 subcategory: formData.subcategory,
                 topic: formData.topic,
-                difficulty: overallDifficulty,
+                difficulty: formData.difficulty,
                 assetText: formData.assetText,
                 assetImageUrl: assetImageUrl || null,
                 questions: processedQuestions,
@@ -405,6 +532,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                         category: '',
                         subcategory: '',
                         topic: '',
+                        difficulty: '',
                         assetFile: null,
                         assetText: '',
                         questions: [DEFAULT_QUESTION],
@@ -439,6 +567,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 category={formData.category}
                 subcategory={formData.subcategory}
                 topic={formData.topic}
+                difficulty={formData.difficulty}
                 onCategoryChange={handleCategoryChange}
                 onMetadataChange={handleMetadataChange}
                 onSubcategoryChange={handleSubcategoryChange}
@@ -449,6 +578,20 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 errors={formErrors}
                 isEnglish={isEnglish}
             />
+
+            {isSubCategorySelected && (
+                <AIControlPanel
+                    category={formData.category}
+                    subcategory={formData.subcategory}
+                    topic={formData.topic}
+                    onGenerate={handleGenerate}
+                    apiKey={aiApiKey}
+                    globalPrompts={globalPrompts}
+                    onSaveApiKey={handleSaveApiKey}
+                    onSaveGlobalPrompts={handleSaveGlobalPrompts}
+                    isGenerating={isGenerating}
+                />
+            )}
 
             {isQuestionSet && (
                 <SharedAsset
@@ -497,7 +640,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 />
             </div>
 
-            <div className="flex justify-center sm:justify-start pt-8 border-t border-gray-200 dark:border-gray-800">
+            <div className="flex justify-center sm:justify-start pt-8 border-t border-gray-200">
                 <button
                     type="submit"
                     disabled={!isSubCategorySelected || loading}

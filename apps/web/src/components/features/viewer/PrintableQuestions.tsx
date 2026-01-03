@@ -22,6 +22,7 @@ export const PrintableQuestions = ({ questions }: PrintableQuestionsProps) => {
                                     category: q.category || '',
                                     subcategory: q.subcategory || '',
                                     topic: q.topic,
+                                    difficulty: q.difficulty || '',
                                     assetFile: null,
                                     assetImageUrl: null,
                                     assetText: q.assetText || '',

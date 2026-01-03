@@ -5,14 +5,14 @@ import { ActionCard } from '@/components/features/home/ActionCard';
  */
 export default function Home() {
     return (
-        <div className="min-h-screen bg-white dark:bg-black" dir="rtl">
+        <div className="min-h-screen bg-white" dir="rtl">
             <main className="flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
                 <div className="w-full max-w-3xl mx-auto space-y-16">
                     <div className="text-center space-y-3">
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-black dark:text-white tracking-tight">
+                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-black tracking-tight">
                             ברוכים הבאים
                         </h1>
-                        <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium max-w-lg mx-auto leading-relaxed">
+                        <p className="text-sm sm:text-base text-gray-500 font-medium max-w-lg mx-auto leading-relaxed">
                             נהלו את מאגר השאלות של Psycho Booster בקלות ובמקום אחד
                         </p>
                     </div>
