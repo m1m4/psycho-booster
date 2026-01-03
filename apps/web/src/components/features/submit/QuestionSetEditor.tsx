@@ -33,29 +33,87 @@ interface FormDataState {
     [key: string]: any;
 }
 
+const DRAFT_KEY = 'psycho_booster_submit_draft';
+
+const cleanForStorage = (data: any): any => {
+    if (typeof window !== 'undefined' && data instanceof File) return null;
+    if (Array.isArray(data)) return data.map(cleanForStorage);
+    if (data !== null && typeof data === 'object') {
+        const obj: any = {};
+        for (const key in data) {
+            // Skip large objects or circular refs if any (none expected here)
+            obj[key] = cleanForStorage(data[key]);
+        }
+        return obj;
+    }
+    return data;
+};
+
 export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorProps) {
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-    const [formData, setFormData] = useState<FormDataState>({
-        category: initialData?.category || '',
-        subcategory: initialData?.subcategory || '',
-        topic: initialData?.topic || '',
-        difficulty: initialData?.difficulty || '',
-        assetFile: null,
-        assetText: initialData?.assetText || '',
-        ...(initialData as any),
-        questions: (initialData?.questions && initialData.questions.length > 0
-            ? initialData.questions.map((q: any) => ({
-                ...q,
-                questionImage: q.questionImage || q.questionImageUrl || null,
-                answer1Image: q.answer1Image || q.answer1ImageUrl || null,
-                answer2Image: q.answer2Image || q.answer2ImageUrl || null,
-                answer3Image: q.answer3Image || q.answer3ImageUrl || null,
-                answer4Image: q.answer4Image || q.answer4ImageUrl || null,
-            }))
-            : [DEFAULT_QUESTION]) as QuestionItem[]
+    const [formData, setFormData] = useState<FormDataState>(() => {
+        // 1. If we have initialData (Edit mode), use it
+        if (initialData) {
+            return {
+                category: initialData?.category || '',
+                subcategory: initialData?.subcategory || '',
+                topic: initialData?.topic || '',
+                difficulty: initialData?.difficulty || '',
+                assetFile: null,
+                assetText: initialData?.assetText || '',
+                ...(initialData as any),
+                questions: (initialData?.questions && initialData.questions.length > 0
+                    ? initialData.questions.map((q: any) => ({
+                        ...q,
+                        questionImage: q.questionImage || q.questionImageUrl || null,
+                        answer1Image: q.answer1Image || q.answer1ImageUrl || null,
+                        answer2Image: q.answer2Image || q.answer2ImageUrl || null,
+                        answer3Image: q.answer3Image || q.answer3ImageUrl || null,
+                        answer4Image: q.answer4Image || q.answer4ImageUrl || null,
+                    }))
+                    : [DEFAULT_QUESTION]) as QuestionItem[]
+            };
+        }
+
+        // 2. If no initialData (Creation mode), check for draft in localStorage
+        if (typeof window !== 'undefined') {
+            const savedDraft = localStorage.getItem(DRAFT_KEY);
+            if (savedDraft) {
+                try {
+                    const parsed = JSON.parse(savedDraft);
+                    if (parsed && typeof parsed === 'object') {
+                        return {
+                            ...parsed,
+                            assetFile: null,
+                            questions: parsed.questions?.map((q: any) => ({
+                                ...q,
+                                questionImage: typeof q.questionImage === 'string' ? q.questionImage : null,
+                                answer1Image: typeof q.answer1Image === 'string' ? q.answer1Image : null,
+                                answer2Image: typeof q.answer2Image === 'string' ? q.answer2Image : null,
+                                answer3Image: typeof q.answer3Image === 'string' ? q.answer3Image : null,
+                                answer4Image: typeof q.answer4Image === 'string' ? q.answer4Image : null,
+                            })) || [DEFAULT_QUESTION]
+                        };
+                    }
+                } catch (e) {
+                    console.error('Failed to parse draft from localStorage:', e);
+                }
+            }
+        }
+
+        // 3. Default state if no initialData and no draft
+        return {
+            category: '',
+            subcategory: '',
+            topic: '',
+            difficulty: '',
+            assetFile: null,
+            assetText: '',
+            questions: [DEFAULT_QUESTION]
+        };
     });
 
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
@@ -81,6 +139,18 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
         setAiModel(model);
         localStorage.setItem('ai_model_preference', model);
     };
+
+    // Save draft to local storage when formData changes (Creation Mode Only)
+    // Debounced to avoid excessive writes during typing
+    useEffect(() => {
+        if (!initialData) {
+            const timer = setTimeout(() => {
+                const cleanData = cleanForStorage(formData);
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(cleanData));
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [formData, initialData]);
 
     // Fetch user preferences and prompts
     useEffect(() => {
