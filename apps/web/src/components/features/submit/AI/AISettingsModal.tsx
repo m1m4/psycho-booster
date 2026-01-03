@@ -4,6 +4,7 @@ import { SUBCATEGORY_OPTIONS, TOPIC_OPTIONS } from '@/types/submit';
 
 interface GlobalPrompts {
     base_prompt: string;
+    refinement_prompt?: string;
     categories: Record<string, string>; // key might be "category_subcategory" or "category_subcategory_topic"
 }
 
@@ -36,7 +37,7 @@ export function AISettingsModal(props: AISettingsModalProps) {
         selectedModel,
         onSaveModel
     } = props;
-    const [activeTab, setActiveTab] = useState<'api' | 'base' | 'context'>('api');
+    const [activeTab, setActiveTab] = useState<'api' | 'base' | 'context' | 'refinement'>('api');
     const [apiKey, setApiKey] = useState(currentApiKey);
     const [prompts, setPrompts] = useState<GlobalPrompts>(globalPrompts);
 
@@ -105,6 +106,29 @@ Ensure high quality academic Hebrew.`;
         setPrompts(prev => ({ ...prev, base_prompt: defaultBasePrompt }));
     };
 
+    const handleGenerateRefinementDefault = () => {
+        const defaultRefinement = `Role: Expert Psychometric Editor.
+Goal: Modify the existing questions based on User Instructions.
+
+Refinement Rules:
+1. Return a JSON array of objects.
+2. Each object MUST have an "id" matching the original question.
+3. Only include fields that CHANGED.
+4. If no changes are needed for a question, omit it.
+5. Maintain the difficulty level and style requested in the original Context unless instructed otherwise.
+
+Input Context:
+Category: {{category}}
+Subcategory: {{subcategory}}
+Topic: {{topic}}
+Difficulty: {{difficulty}}
+
+Current Questions Data:
+{{current_questions}}`;
+
+        setPrompts(prev => ({ ...prev, refinement_prompt: defaultRefinement }));
+    };
+
     const getContextKey = () => {
         let key = selectedCategory;
         if (selectedSubcategory && selectedSubcategory !== 'none') key += `_${selectedSubcategory}`;
@@ -113,11 +137,12 @@ Ensure high quality academic Hebrew.`;
     };
 
     const handlePromptChange = (val: string) => {
-        const key = activeTab === 'base' ? 'base_prompt' : getContextKey();
-
         if (activeTab === 'base') {
             setPrompts(prev => ({ ...prev, base_prompt: val }));
+        } else if (activeTab === 'refinement') {
+            setPrompts(prev => ({ ...prev, refinement_prompt: val }));
         } else {
+            const key = getContextKey();
             setPrompts(prev => ({
                 ...prev,
                 categories: {
@@ -130,6 +155,7 @@ Ensure high quality academic Hebrew.`;
 
     const getCurrentPromptValue = () => {
         if (activeTab === 'base') return prompts.base_prompt;
+        if (activeTab === 'refinement') return prompts.refinement_prompt || '';
         const key = getContextKey();
         return prompts.categories[key] || '';
     };
@@ -161,6 +187,13 @@ Ensure high quality academic Hebrew.`;
                         className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'base' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                     >
                         הנחיית בסיס
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('refinement')}
+                        className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'refinement' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        הנחיית שינויים (Refinement)
                     </button>
                     <button
                         type="button"
@@ -266,12 +299,21 @@ Ensure high quality academic Hebrew.`;
                                             צור הנחיית ברירת מחדל
                                         </button>
                                     )}
+                                    {activeTab === 'refinement' && !prompts.refinement_prompt && (
+                                        <button
+                                            type="button"
+                                            onClick={handleGenerateRefinementDefault}
+                                            className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                        >
+                                            צור הנחיית שינויים ברירת מחדל
+                                        </button>
+                                    )}
                                 </div>
                                 <textarea
                                     value={getCurrentPromptValue()}
                                     onChange={(e) => handlePromptChange(e.target.value)}
                                     className="w-full flex-1 p-3 border rounded-lg bg-gray-50 border-gray-300 font-mono text-sm resize-none text-left"
-                                    placeholder={activeTab === 'base' ? "הכנס הנחיות מערכת כלליות..." : "הכנס הנחיות ספציפיות לנושא זה..."}
+                                    placeholder={activeTab === 'base' ? "הכנס הנחיות מערכת כלליות..." : activeTab === 'refinement' ? "הכנס הנחיית מערכת לשינוי שאלות קיימות..." : "הכנס הנחיות ספציפיות לנושא זה..."}
                                     dir="ltr"
                                     style={{ minHeight: '200px' }}
                                 />
@@ -282,6 +324,7 @@ Ensure high quality academic Hebrew.`;
                                         <code className="bg-white px-1 rounded border">{'{{category}}'}</code>
                                         <code className="bg-white px-1 rounded border">{'{{subcategory}}'}</code>
                                         <code className="bg-white px-1 rounded border">{'{{topic}}'}</code>
+                                        {activeTab === 'refinement' && <code className="bg-white px-1 rounded border">{'{{current_questions}}'}</code>}
                                     </div>
                                 </div>
                             </div>

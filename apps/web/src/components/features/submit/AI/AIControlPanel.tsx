@@ -29,8 +29,9 @@ export function AIControlPanel({
     onSaveGlobalPrompts = () => { },
     isGenerating = false,
     selectedModel = 'gemini-3.0-flash',
-    onSaveModel = () => { }
-}: AIControlPanelProps) {
+    onSaveModel = () => { },
+    questions = [] // New prop
+}: AIControlPanelProps & { questions?: any[] }) {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [instructions, setInstructions] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
@@ -42,8 +43,20 @@ export function AIControlPanel({
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isEditingPreview, setIsEditingPreview] = useState(false);
 
+    // Check if we are in "Refinement Mode" (editing existing data)
+    // We consider it refinement if there are questions and it's not just a single empty default question
+    const isRefinementMode = React.useMemo(() => {
+        if (!questions || questions.length === 0) return false;
+        if (questions.length > 1) return true;
+        const q = questions[0];
+        // Check if the single question has meaningful data
+        return !!(q.questionText || q.answer1 || q.answer2);
+    }, [questions]);
+
     // Default instruction
-    const DEFAULT_INSTRUCTION = "Find a unique question that is based on the Israeli psychometry exam";
+    const DEFAULT_INSTRUCTION = isRefinementMode
+        ? "Describe what you want to change in the existing questions..."
+        : "Find a unique question that is based on the Israeli psychometry exam";
 
     // Effect to construct full prompt whenever dependencies change
     React.useEffect(() => {
@@ -69,12 +82,65 @@ export function AIControlPanel({
             return result;
         };
 
-        // 1. Base Prompt
-        if (globalPrompts.base_prompt) {
-            promptParts.push(replacePlaceholders(globalPrompts.base_prompt));
+        // 1. Prompt Selection (Base or Refinement)
+        if (isRefinementMode) {
+            // REFINEMENT MODE
+            let refinementPrompt = globalPrompts.refinement_prompt;
+
+            // Default if missing
+            if (!refinementPrompt) {
+                refinementPrompt = `Role: Expert Psychometric Editor.
+Goal: Modify the existing questions based on User Instructions.
+
+Refinement Rules:
+1. Return a JSON array of objects.
+2. Each object MUST have an "id" matching the original question.
+3. Only include fields that CHANGED.
+4. If no changes are needed for a question, omit it.
+5. Maintain the difficulty level and style requested in the original Context unless instructed otherwise.
+
+Input Context:
+Category: {{category}}
+Subcategory: {{subcategory}}
+Topic: {{topic}}
+Difficulty: {{difficulty}}
+
+Current Questions Data:
+{{current_questions}}`;
+            }
+
+            // Replace variables in refinement prompt
+            let processedRefinementPrompt = replacePlaceholders(refinementPrompt);
+
+            // 2. Prepare Question Data
+            const questionsJson = JSON.stringify(questions, (key, value) => {
+                // Filter out heavy fields if needed, like base64 images, to save tokens
+                if (key.includes('Image') && typeof value === 'string' && value.length > 500) {
+                    return "[Image Data Omitted]";
+                }
+                return value;
+            }, 2);
+
+            // 3. Inject Question Data
+            if (processedRefinementPrompt.includes('{{current_questions}}')) {
+                processedRefinementPrompt = processedRefinementPrompt.replace('{{current_questions}}', questionsJson);
+            } else {
+                // Fallback: Append if placeholder is missing
+                processedRefinementPrompt += `\n\nCurrent Questions Data:\n${questionsJson}`;
+            }
+
+            promptParts.push(processedRefinementPrompt);
+
+        } else {
+            // CREATION MODE
+            if (globalPrompts.base_prompt) {
+                promptParts.push(replacePlaceholders(globalPrompts.base_prompt));
+            }
         }
 
-        // 2. Category Prompt
+        // 2. Category Prompt (Common to both, provides potential extra context)
+        // Only include if we want category specific instructions in refinement too.
+        // Usually yes, as "Context Prompt" might have style guidelines.
         if (category) {
             const categoryPrompt = globalPrompts.categories?.[category];
             if (categoryPrompt) promptParts.push(replacePlaceholders(categoryPrompt));
@@ -99,7 +165,7 @@ export function AIControlPanel({
         const constructed = promptParts.join('\n\n-----------------\n\n');
         setFullPromptPreview(constructed);
 
-    }, [category, subcategory, topic, difficulty, globalPrompts, instructions, isEditingPreview]);
+    }, [category, subcategory, topic, difficulty, globalPrompts, instructions, isEditingPreview, isRefinementMode, questions]);
 
     // Initialize default instructions if empty logic is handled dynamically above, 
     // but we want the placeholder to show emptiness until user types.
@@ -131,9 +197,11 @@ export function AIControlPanel({
             setError('נא לבחור נושא');
             return;
         }
-        if (!difficulty) {
-            setError('נא לבחור רמת קושי');
-            return;
+        if (questions && questions.length === 0 && !difficulty) { // Allow no difficulty if refining? No, still good to have.
+            if (!difficulty) {
+                setError('נא לבחור רמת קושי');
+                return;
+            }
         }
 
         // Send the final prompt (either auto-constructed or user-edited)
@@ -155,7 +223,11 @@ export function AIControlPanel({
                             type="button"
                             onClick={handleGenerateClick}
                             disabled={isGenerating}
-                            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base whitespace-nowrap"
+                            className={`flex items-center gap-2 text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base whitespace-nowrap border-none outline-none
+                                ${isRefinementMode
+                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
+                                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                                }`}
                         >
                             {isGenerating ? (
                                 <>
@@ -163,12 +235,12 @@ export function AIControlPanel({
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    <span>מייצר...</span>
+                                    <span>{isRefinementMode ? 'מעדכן...' : 'מייצר...'}</span>
                                 </>
                             ) : (
                                 <>
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                    <span>צור שאלות עם AI</span>
+                                    <span>{isRefinementMode ? 'שנה עם AI' : 'צור עם AI'}</span>
                                 </>
                             )}
                         </button>

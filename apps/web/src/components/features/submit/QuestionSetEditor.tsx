@@ -61,6 +61,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
     const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // AI State
     const [aiApiKey, setAiApiKey] = useState('');
@@ -118,8 +119,16 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
             if (formData.subcategory) contextKey += `_${formData.subcategory}`;
             if (formData.topic && formData.category === 'quantitative') contextKey += `_${formData.topic}`;
 
-            const contextPrompt = (globalPrompts.categories as any)[contextKey] || '';
             const basePrompt = globalPrompts.base_prompt || '';
+
+            // Check if we are in refinement mode (matching AIControlPanel logic)
+            const isRefinementMode = formData.questions.length > 1 || (
+                formData.questions.length === 1 && (
+                    !!formData.questions[0].questionText ||
+                    !!formData.questions[0].answer1 ||
+                    !!formData.questions[0].answer2
+                )
+            );
 
             const generatedQuestions = await generateQuestions({
                 apiKey: aiApiKey,
@@ -130,11 +139,18 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 subcategory: formData.subcategory,
                 topic: formData.topic,
                 model: aiModel,
-                fullPrompt: instructions // instructions argument here is actually the full prompt from AIControlPanel
+                fullPrompt: instructions, // instructions argument here is actually the full prompt from AIControlPanel
+                currentQuestions: isRefinementMode ? formData.questions : undefined
             });
 
-            // Merge questions: If only default question exists, replace it. Otherwise append.
+            // Merge questions logic
             setFormData(prev => {
+                // If in refinement mode, the generatedQuestions array IS the new state (merged in gemini.ts)
+                if (isRefinementMode) {
+                    return { ...prev, questions: generatedQuestions };
+                }
+
+                // Creation Mode Logic (Append or Replace Default)
                 const currentQuestions = prev.questions;
                 const isOnlyDefault = currentQuestions.length === 1 &&
                     !currentQuestions[0].questionText &&
@@ -161,9 +177,10 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 setActiveQuestionIndex(0);
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Generation error:", error);
-            alert("Failed to generate questions. check console and API key.");
+            const msg = error.message || "Failed to generate questions.";
+            setErrorMessage(msg.includes("parse") ? "Error: AI response format invalid. Try refining your prompt." : msg);
         } finally {
             setIsGenerating(false);
         }
@@ -616,6 +633,13 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 onClose={() => setSuccessMessage(null)}
                 duration={3000}
             />
+            <Toast
+                message={errorMessage || ''}
+                isVisible={!!errorMessage}
+                onClose={() => setErrorMessage(null)}
+                duration={6000}
+                type="error"
+            />
             <QuestionMetadata
                 category={formData.category}
                 subcategory={formData.subcategory}
@@ -646,6 +670,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                     isGenerating={isGenerating}
                     selectedModel={aiModel}
                     onSaveModel={handleSaveAiModel}
+                    questions={formData.questions}
                 />
             )}
 

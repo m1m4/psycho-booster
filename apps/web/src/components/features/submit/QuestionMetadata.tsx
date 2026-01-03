@@ -70,6 +70,19 @@ export function QuestionMetadata({
                     dir={isEnglish ? 'ltr' : 'rtl'}
                     error={errors['subcategory-select'] ? ' ' : undefined}
                 />
+                {category === 'quantitative' && subcategory && TOPIC_OPTIONS[subcategory] && (
+                    <Select
+                        label="נושא"
+                        name="topic"
+                        id="topic-select"
+                        value={topic}
+                        onChange={onMetadataChange}
+                        placeholder="בחר נושא..."
+                        options={TOPIC_OPTIONS[subcategory] || []}
+                        disabled={!subcategory}
+                        error={errors['topic-select'] ? ' ' : undefined}
+                    />
+                )}
                 <Select
                     label={isQuestionSet ? (isEnglish ? 'Set Difficulty' : 'רמת קושי לערכה') : (isEnglish ? 'Difficulty' : 'רמת קושי')}
                     name="difficulty"
@@ -87,22 +100,6 @@ export function QuestionMetadata({
                     error={errors['difficulty-select'] ? ' ' : undefined}
                 />
             </div>
-
-            {category === 'quantitative' && subcategory && TOPIC_OPTIONS[subcategory] && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Select
-                        label="נושא"
-                        name="topic"
-                        id="topic-select"
-                        value={topic}
-                        onChange={onMetadataChange}
-                        placeholder="בחר נושא..."
-                        options={TOPIC_OPTIONS[subcategory] || []}
-                        disabled={!subcategory}
-                        error={errors['topic-select'] ? ' ' : undefined}
-                    />
-                </div>
-            )}
 
             {isQuestionSet && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
