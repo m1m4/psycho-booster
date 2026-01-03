@@ -63,7 +63,21 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
     // AI State
     const [aiApiKey, setAiApiKey] = useState('');
     const [globalPrompts, setGlobalPrompts] = useState({ base_prompt: '', categories: {} });
+    const [aiModel, setAiModel] = useState('gemini-3-flash-preview');
     const [isGenerating, setIsGenerating] = useState(false);
+
+    // Load AI model from local storage on mount
+    useEffect(() => {
+        const savedModel = localStorage.getItem('ai_model_preference');
+        if (savedModel) {
+            setAiModel(savedModel);
+        }
+    }, []);
+
+    const handleSaveAiModel = (model: string) => {
+        setAiModel(model);
+        localStorage.setItem('ai_model_preference', model);
+    };
 
     // Fetch user preferences and prompts
     useEffect(() => {
@@ -107,12 +121,14 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
 
             const generatedQuestions = await generateQuestions({
                 apiKey: aiApiKey,
-                instructions,
-                basePrompt,
-                contextPrompt,
+                instructions: '', // ignored when fullPrompt is present
+                basePrompt: globalPrompts.base_prompt,
+                contextPrompt: '', // ignored
                 category: formData.category,
                 subcategory: formData.subcategory,
-                topic: formData.topic
+                topic: formData.topic,
+                model: aiModel,
+                fullPrompt: instructions // instructions argument here is actually the full prompt from AIControlPanel
             });
 
             // Merge questions: If only default question exists, replace it. Otherwise append.
@@ -584,12 +600,15 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                     category={formData.category}
                     subcategory={formData.subcategory}
                     topic={formData.topic}
+                    difficulty={formData.difficulty}
                     onGenerate={handleGenerate}
                     apiKey={aiApiKey}
                     globalPrompts={globalPrompts}
                     onSaveApiKey={handleSaveApiKey}
                     onSaveGlobalPrompts={handleSaveGlobalPrompts}
                     isGenerating={isGenerating}
+                    selectedModel={aiModel}
+                    onSaveModel={handleSaveAiModel}
                 />
             )}
 

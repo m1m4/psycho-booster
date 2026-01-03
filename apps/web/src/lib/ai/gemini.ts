@@ -4,16 +4,18 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface GenerationParams {
     apiKey: string;
-    instructions: string; // User instructions
-    basePrompt: string; // Global base prompt
-    contextPrompt: string; // Category/Subcategory specific prompt
+    instructions: string; // User instructions (ignored if fullPrompt is present)
+    basePrompt: string; // Global base prompt (ignored if fullPrompt is present)
+    contextPrompt: string; // Category prompt (ignored if fullPrompt is present)
     category: string;
     subcategory: string;
     topic?: string;
+    model?: string;
+    fullPrompt?: string; // New: Full system prompt constructed by UI
 }
 
 export async function generateQuestions(params: GenerationParams): Promise<QuestionItem[]> {
-    const { apiKey, instructions, basePrompt, contextPrompt, category, subcategory, topic } = params;
+    const { apiKey, instructions, basePrompt, contextPrompt, category, subcategory, topic, model: modelName, fullPrompt } = params;
 
     if (!apiKey) {
         throw new Error("Missing API Key");
@@ -21,9 +23,12 @@ export async function generateQuestions(params: GenerationParams): Promise<Quest
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: modelName || "gemini-2.0-flash-exp" });
 
-        const systemPrompt = `
+        let systemPrompt = fullPrompt;
+
+        if (!systemPrompt) {
+            systemPrompt = `
 ${basePrompt}
 
 Context:
@@ -37,6 +42,7 @@ ${contextPrompt}
 User Additional Instructions:
 ${instructions}
         `;
+        }
 
         const result = await model.generateContent(systemPrompt);
         const responseText = result.response.text();
@@ -74,7 +80,7 @@ ${instructions}
             answer2: q.answer2 || '',
             answer3: q.answer3 || '',
             answer4: q.answer4 || '',
-            correctAnswer: q.correctAnswer || 1,
+            correctAnswer: (q.correctAnswer || 1).toString(),
             explanation: q.explanation || '',
             answersMode: 'text' // Auto-assume text for AI generated for now
         }));

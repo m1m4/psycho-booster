@@ -13,7 +13,6 @@ export function Navbar() {
         { label: 'בית', href: '/' },
         { label: 'הוספה', href: '/submit' },
         { label: 'תיבת דואר', href: '/inbox' },
-        { label: 'אוטומציה', href: '/automation' },
         { label: 'צפייה', href: '/viewer' },
         { label: 'פיתוח', href: '/dev' },
     ];
