@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { QuestionItem, DEFAULT_QUESTION, QuestionSet } from '@/types/submit';
+import { QuestionItem, DEFAULT_QUESTION, QuestionSet, SUBCATEGORY_OPTIONS } from '@/types/submit';
 import { QuestionMetadata } from '@/components/features/submit/QuestionMetadata';
 import { SharedAsset } from '@/components/features/submit/SharedAsset';
 import { QuestionTabs } from '@/components/features/submit/QuestionTabs';
@@ -15,6 +15,7 @@ import { compressImage } from '@/lib/utils/image-compression';
 import { AIControlPanel } from '@/components/features/submit/AI/AIControlPanel';
 import { generateQuestions } from '@/lib/ai/gemini';
 import { Toast } from '@/components/ui/Toast';
+import { ImportModal } from '@/components/features/submit/ImportModal';
 
 interface QuestionSetEditorProps {
     initialData?: Partial<QuestionSet> | null;
@@ -54,6 +55,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
     const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [formData, setFormData] = useState<FormDataState>(() => {
         // 1. If we have initialData (Edit mode), use it
         if (initialData) {
@@ -683,6 +685,39 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
         }
     };
 
+    const handleImport = (importedData: any) => {
+        setFormData(prev => {
+            let category = importedData.category || prev.category;
+
+            // Infer category from subcategory if missing
+            if (!importedData.category && importedData.subcategory) {
+                const cats = SUBCATEGORY_OPTIONS as Record<string, any[]>;
+                for (const cat in cats) {
+                    if (cats[cat].some(opt => opt.value === importedData.subcategory)) {
+                        category = cat;
+                        break;
+                    }
+                }
+            }
+
+            const newState = { ...prev, ...importedData, category };
+
+            // Handle questions mapping if present
+            if (importedData.questions && Array.isArray(importedData.questions)) {
+                newState.questions = importedData.questions.map((q: any, idx: number) => ({
+                    ...DEFAULT_QUESTION,
+                    difficulty: newState.difficulty || DEFAULT_QUESTION.difficulty,
+                    ...q,
+                    id: idx + 1
+                }));
+            }
+
+            return newState;
+        });
+        setActiveQuestionIndex(0);
+        setSuccessMessage(isEnglish ? 'Data imported successfully!' : 'הנתונים יובאו בהצלחה!');
+    };
+
     const labels = {
         question: isEnglish ? 'Question' : 'שאלה',
         answers: isEnglish ? 'Answers' : 'תשובות',
@@ -724,6 +759,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 isSubCategorySelected={isSubCategorySelected}
                 errors={formErrors}
                 isEnglish={isEnglish}
+                onImportOpen={() => setIsImportModalOpen(true)}
             />
 
             {isSubCategorySelected && (
@@ -811,6 +847,13 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 formData={formData}
                 isEnglish={isEnglish}
                 isSubmitting={loading}
+            />
+
+            <ImportModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onImport={handleImport}
+                isEnglish={isEnglish}
             />
         </form>
     );
