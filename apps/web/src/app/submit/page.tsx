@@ -19,10 +19,13 @@ function SubmitPageContent() {
     });
 
     const handleEditorSuccess = (newId: string) => {
-        // Use replace and a small delay for stability
-        setTimeout(() => {
-            router.replace('/viewer?success=true');
-        }, 150);
+        if (editId) {
+            // Use replace and a small delay for stability
+            setTimeout(() => {
+                router.replace('/viewer?success=true');
+            }, 150);
+        }
+        // If not editing, we stay on the page. QuestionSetEditor will handle the reset and notification.
     };
 
     if (editId && isLoading) {

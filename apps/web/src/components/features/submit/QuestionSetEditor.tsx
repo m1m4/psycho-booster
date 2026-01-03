@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { compressImage } from '@/lib/utils/image-compression';
 import { AIControlPanel } from '@/components/features/submit/AI/AIControlPanel';
 import { generateQuestions } from '@/lib/ai/gemini';
+import { Toast } from '@/components/ui/Toast';
 
 interface QuestionSetEditorProps {
     initialData?: Partial<QuestionSet> | null;
@@ -59,6 +60,7 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
 
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
     const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     // AI State
     const [aiApiKey, setAiApiKey] = useState('');
@@ -179,9 +181,16 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
                 answer4Image: q.answer4Image || q.answer4ImageUrl || null,
             })) as QuestionItem[];
 
+            // Infer difficulty from first question if missing at top level (legacy support)
+            let inferredDifficulty = initialData.difficulty || '';
+            if (!inferredDifficulty && mappedQuestions.length > 0 && mappedQuestions[0].difficulty) {
+                inferredDifficulty = mappedQuestions[0].difficulty;
+            }
+
             setFormData(prev => ({
                 ...prev,
                 ...initialData,
+                difficulty: inferredDifficulty,
                 questions: mappedQuestions
             }));
         }
@@ -540,21 +549,43 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
 
             if (onSuccess) {
                 onSuccess(newId);
-            } else {
-                alert(initialData ? `Question set updated! ID: ${newId}` : `Question set submitted! ID: ${newId}`);
+            }
 
-                if (!initialData) {
-                    setFormData({
-                        category: '',
-                        subcategory: '',
-                        topic: '',
-                        difficulty: '',
+            if (!initialData) {
+                // Creation Mode: Reset form but keep metadata, and show success message
+                setFormData(prev => {
+                    // Re-calculate isQuestionSet based on preserved subcategory
+                    const isChart = prev.subcategory === 'chart_inference';
+                    const isReading = prev.subcategory === 'reading_comprehension_verbal' || prev.subcategory === 'reading_comprehension_eng';
+                    const isSet = isChart || isReading;
+
+                    return {
+                        ...prev,
                         assetFile: null,
                         assetText: '',
-                        questions: [DEFAULT_QUESTION],
-                    });
-                    setActiveQuestionIndex(0);
-                }
+                        assetImageUrl: null, // Clear uploaded asset url
+                        questions: [{
+                            ...DEFAULT_QUESTION,
+                            // If it's a single question, apply the preserved difficulty immediately
+                            difficulty: !isSet ? prev.difficulty : DEFAULT_QUESTION.difficulty
+                        }],
+                    };
+                });
+                setActiveQuestionIndex(0);
+
+                const message = formData.category === 'english'
+                    ? 'Question set submitted successfully! Form reset.'
+                    : 'השאלה נשמרה בהצלחה! הטופס אופס.';
+
+                setSuccessMessage(message);
+
+                // Clear success message after 5 seconds
+                setTimeout(() => {
+                    setSuccessMessage(null);
+                }, 5000);
+            } else if (!onSuccess) {
+                // Fallback if no onSuccess provided and it is edit mode (unlikely but safe)
+                alert(`Question set updated! ID: ${newId}`);
             }
 
         } catch (error) {
@@ -579,6 +610,12 @@ export function QuestionSetEditor({ initialData, onSuccess }: QuestionSetEditorP
 
     return (
         <form onSubmit={handleSubmit} className="space-y-8" dir="rtl">
+            <Toast
+                message={successMessage || ''}
+                isVisible={!!successMessage}
+                onClose={() => setSuccessMessage(null)}
+                duration={3000}
+            />
             <QuestionMetadata
                 category={formData.category}
                 subcategory={formData.subcategory}
