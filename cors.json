@@ -3,7 +3,8 @@
         "origin": [
             "http://localhost:3000",
             "https://localhost:3000",
-            "https://psycho-booster--test-kgi40grg.web.app"
+            "https://psycho-booster--test-kgi40grg.web.app",
+            "https://psycho-booster.web.app"
         ],
         "method": [
             "GET"

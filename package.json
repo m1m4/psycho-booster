@@ -1,0 +1,23 @@
+{
+    "name": "psycho-booster-root",
+    "private": true,
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "dev": "npm run dev --workspace=web",
+        "dev:https": "npm run dev:https --workspace=web",
+        "build": "npm run build --workspace=web",
+        "lint": "npm run lint --workspaces",
+        "deploy": "npm run deploy --workspace=web",
+        "deploytest": "npm run deploytest --workspace=web"
+    },
+    "devDependencies": {
+        "dotenv-cli": "^11.0.0",
+        "firebase-tools": "^15.1.0"
+    },
+    "dependencies": {
+        "firebase": "^12.7.0"
+    }
+}

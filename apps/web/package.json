@@ -3,28 +3,28 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0 --webpack",
-    "build": "next build --webpack",
+    "dev": "dotenv -e ../../.env -- next dev -H 0.0.0.0 --webpack",
+    "build": "dotenv -e ../../.env -- next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "export": "next build --webpack",
+    "export": "dotenv -e ../../.env -- next build --webpack",
     "deploy": "npm run export && cd ../.. && firebase deploy --only hosting",
-    "deploytest": "cd ../.. && firebase hosting:channel:deploy test",
-    "dev:https": "next dev --experimental-https -H 0.0.0.0 --webpack"
+    "deploytest": "npm run export && cd ../.. && firebase hosting:channel:deploy test",
+    "dev:https": "dotenv -e ../../.env -- next dev --experimental-https -H 0.0.0.0 --webpack"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
     "@tanstack/react-query": "^5.90.12",
     "expo": "^54.0.30",
-    "firebase": "^12.7.0",
     "html-to-image": "^1.11.13",
     "html2pdf.js": "^0.12.1",
     "jspdf": "^3.0.4",
     "katex": "^0.16.27",
-    "next": "16.1.1",
+    "next": "^16.1.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-native-web": "^0.21.0"
+    "react-native-web": "^0.21.0",
+    "shared": "*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -32,7 +32,7 @@
     "@types/node": "^20",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19",
-    "babel-plugin-react-compiler": "1.0.0",
+    "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "firebase-tools": "^15.1.0",

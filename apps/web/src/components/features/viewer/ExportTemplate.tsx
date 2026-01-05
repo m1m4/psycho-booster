@@ -14,11 +14,11 @@ export function ExportTemplate({ questions }: ExportTemplateProps) {
                 <h1 className="text-3xl font-bold mb-8 text-center border-b pb-4">מבחן לדוגמה</h1>
                 {questions.map((q, index) => {
                     const hasAsset = !!q.assetText || !!(q as any).assetImageUrl;
-                    
+
                     return (
                         <div key={`param-group-${q.id}`}>
                             {/* First Item: Asset + First Question */}
-                            <div 
+                            <div
                                 className="export-question-item mb-8 pb-8 border-b border-gray-200"
                                 data-break-after={q.questions.length > 1 ? "true" : "false"}
                             >
@@ -64,8 +64,8 @@ export function ExportTemplate({ questions }: ExportTemplateProps) {
 
                             {/* Remaining Questions - Each in their own block */}
                             {q.questions.length > 1 && q.questions.slice(1).map((subQ, subIndex) => (
-                                <div 
-                                    key={`subq-${q.id}-${subIndex + 1}`} 
+                                <div
+                                    key={`subq-${q.id}-${subIndex + 1}`}
                                     className="export-question-item mb-8 pb-8 border-b border-gray-200"
                                 >
                                     <div className="flex items-start gap-4">
@@ -99,7 +99,7 @@ export function ExportTemplate({ questions }: ExportTemplateProps) {
             <div id="export-answers-section" className="mt-8">
                 <h2 className="text-2xl font-bold mb-6 text-center border-b pb-2">מפתח תשובות</h2>
                 <div id="export-answers-grid" className="grid grid-cols-5 gap-4 text-sm p-1">
-                    {questions.flatMap((q, index) => 
+                    {questions.flatMap((q, index) =>
                         q.questions.map((subQ, subIndex) => {
                             const label = q.questions.length > 1 ? `${index + 1}.${subIndex + 1}` : `${index + 1}`;
                             return (
@@ -116,10 +116,10 @@ export function ExportTemplate({ questions }: ExportTemplateProps) {
             {/* Part 3: Explanations - Will be captured individually */}
             <div id="export-explanations-section" className="mt-12">
                 <h2 className="text-2xl font-bold mb-8 text-center border-b pb-4">הסברים</h2>
-                {questions.flatMap((q, index) => 
+                {questions.flatMap((q, index) =>
                     q.questions.map((subQ, subIndex) => {
-                         const label = q.questions.length > 1 ? `${index + 1}.${subIndex + 1}` : `${index + 1}`;
-                         return (
+                        const label = q.questions.length > 1 ? `${index + 1}.${subIndex + 1}` : `${index + 1}`;
+                        return (
                             <div key={`expl-${q.id}-${subIndex}`} className="export-explanation-item mb-8 pb-8 border-b border-gray-100 page-break-inside-avoid">
                                 <div className="flex items-start gap-4">
                                     <div className="flex flex-col items-center min-w-[40px]">
@@ -136,7 +136,7 @@ export function ExportTemplate({ questions }: ExportTemplateProps) {
                                                 questions: [subQ]
                                             }}
                                             isEnglish={q.category === 'english'}
-                                            hideCorrectAnswer={false} 
+                                            hideCorrectAnswer={false}
                                             viewMode="explanation_only"
                                             isExport={true}
                                         />
@@ -148,12 +148,13 @@ export function ExportTemplate({ questions }: ExportTemplateProps) {
                 )}
             </div>
 
-            <style jsx global>{`
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 /* Ensure consistent rendering for capture */
                 .page-break-inside-avoid {
                     break-inside: avoid;
                 }
-            `}</style>
+            ` }} />
         </div>
     );
 }

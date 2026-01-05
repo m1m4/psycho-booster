@@ -289,6 +289,7 @@ export function QuestionsTable({
                             quality: 0.95,
                             backgroundColor: '#ffffff',
                             pixelRatio: 2.0, // Reduced from 2.5 for better mobile performance
+                            skipFonts: true, // Bypass font embedding to prevent "trim" errors in production
                             // cacheBust removed to support signed URLs
                         });
 
