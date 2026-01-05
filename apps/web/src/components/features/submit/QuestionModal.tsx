@@ -11,6 +11,7 @@ interface QuestionModalProps {
         category: string;
         subcategory: string;
         topic?: string;
+        difficulty: string;
         assetFile?: File | null;
         assetImageUrl?: string | null;
         assetText: string;
@@ -59,24 +60,24 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
                 relative w-full md:w-fit md:min-w-[min(90vw,480px)] max-w-6xl 
                 h-full md:h-auto md:max-h-[92vh] mx-auto
                 ${isQuestionSet ? 'md:min-h-[750px]' : 'md:min-h-[500px]'}
-                bg-white dark:bg-black md:rounded-3xl shadow-2xl flex flex-col overflow-hidden 
-                border-x-0 border-y-0 md:border md:border-gray-200 md:dark:border-gray-800 
+                bg-white md:rounded-3xl shadow-2xl flex flex-col overflow-hidden 
+                border-x-0 border-y-0 md:border md:border-gray-200 
                 overscroll-behavior-contain
             `}>
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50/50">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        <h2 className="text-2xl font-bold text-gray-900">
                             {readOnly ? (isEnglish ? 'Question Details' : 'פרטי שאלה') : (isEnglish ? 'Preview Question' : 'תצוגה מקדימה')}
                         </h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-sm text-gray-500 mt-1">
                             {isEnglish ? 'Please review the details before submitting' : 'אנא וודא שכל הפרטים נכונים לפני השליחה'}
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                        className="p-2 rounded-full hover:bg-gray-200 transition-colors"
                     >
                         <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -90,7 +91,7 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
                 </div>
 
                 {/* Footer Actions */}
-                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col sm:flex-row gap-3 justify-between items-center">
+                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex flex-col sm:flex-row gap-3 justify-between items-center">
                     {!readOnly ? (
                         <button
                             onClick={onConfirm}
@@ -132,7 +133,7 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
                     )}
                     <button
                         onClick={onClose}
-                        className={`w-full sm:w-auto px-6 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${readOnly ? '' : ''}`}
+                        className={`w-full sm:w-auto px-6 py-2.5 rounded-xl border border-gray-300 font-medium text-gray-700 hover:bg-gray-100 transition-colors ${readOnly ? '' : ''}`}
                     >
                         {readOnly ? (isEnglish ? 'Close' : 'סגירה') : (isEnglish ? 'Back to Edit' : 'חזרה לעריכה')}
                     </button>

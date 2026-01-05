@@ -80,8 +80,8 @@ export function PreviewRender({
                     className={`
                         ${minimal
                             ? 'p-0 bg-transparent border-none shadow-none'
-                            : 'p-4 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm'} 
-                        text-black dark:text-white min-h-[auto] whitespace-pre-wrap break-words [&_strong]:font-bold
+                            : 'p-4 bg-white border border-gray-200 rounded-lg shadow-sm'} 
+                        text-black min-h-[auto] whitespace-pre-wrap break-words [&_strong]:font-bold
                     `}
                     style={{
                         lineHeight: '1.8',

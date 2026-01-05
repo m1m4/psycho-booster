@@ -31,7 +31,7 @@ export function SharedAsset({
     textError
 }: SharedAssetProps) {
     return (
-        <div className={`bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl space-y-6 border border-gray-200 dark:border-gray-800 ${!isSubCategorySelected ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div className={`bg-gray-50 p-6 rounded-2xl space-y-6 border border-gray-200 ${!isSubCategorySelected ? 'opacity-50 pointer-events-none' : ''}`}>
             <h2 className={`text-xl font-semibold ${isEnglish ? 'text-left' : ''}`}>
                 {isChartInference ? 'קובץ תרשים משותף' : (isEnglish ? 'Reading Passage' : 'קטע קריאה')}
             </h2>
@@ -45,15 +45,18 @@ export function SharedAsset({
                                 className={`
                                 relative border-2 border-dashed rounded-xl p-8 transition-all hover:border-[#4169E1]/50 flex flex-col items-center justify-center gap-4
                                 ${assetFile ? 'bg-[#4169E1]/5 border-[#4169E1]/30' : ''}
-                                ${error ? 'border-red-500 bg-red-50/5' : 'border-gray-200 dark:border-gray-800'}
+                                ${error ? 'border-red-500 bg-red-50/5' : 'border-gray-200'}
                             `}>
                                 {assetFile ? (
-                                    <div className="relative w-full aspect-video max-h-[300px] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm bg-white dark:bg-black">
+                                    <div className="relative w-full aspect-video max-h-[300px] rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white">
                                         <img
                                             src={URL.createObjectURL(assetFile)}
                                             className="w-full h-full object-contain"
                                             alt="Shared Chart"
                                         />
+                                        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-full font-medium border border-white/10">
+                                            {(assetFile.size / 1024).toFixed(0)}KB
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={onClearFile}
@@ -74,7 +77,7 @@ export function SharedAsset({
                                             disabled={!isSubCategorySelected}
                                         />
                                         <div className="flex flex-col items-center justify-center gap-3 text-gray-500">
-                                            <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-full">
+                                            <div className="p-4 bg-gray-100 rounded-full">
                                                 <CameraIcon className="w-8 h-8" />
                                             </div>
                                             <div className="text-center">

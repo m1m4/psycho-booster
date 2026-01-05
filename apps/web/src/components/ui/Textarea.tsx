@@ -126,17 +126,17 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         return (
             <div className="w-full space-y-2" style={{ boxSizing: 'border-box' }}>
                 {label && (
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label className="block text-sm font-medium text-gray-700">
                         {label}
                     </label>
                 )}
                 <div className={`
-                    relative rounded-lg border overflow-hidden bg-white dark:bg-black transition-all duration-200
-                    ${error ? 'border-red-500 focus-within:ring-2 focus-within:ring-red-500' : 'border-gray-200 dark:border-gray-800 focus-within:ring-2 focus-within:ring-[#4169E1]'}
+                    relative rounded-lg border overflow-hidden bg-white transition-all duration-200
+                    ${error ? 'border-red-500 focus-within:ring-2 focus-within:ring-red-500' : 'border-gray-200 focus-within:ring-2 focus-within:ring-[#4169E1]'}
                 `}>
                     <div
                         ref={highlightRef}
-                        className="absolute inset-0 pointer-events-none text-black dark:text-white"
+                        className="absolute inset-0 pointer-events-none text-black"
                         style={{
                             ...sharedStyles,
                         }}
@@ -160,8 +160,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                         onScroll={handleScroll}
                         rows={singleLine ? 1 : (noWrap ? 1 : (props.rows || 1))}
                         className={`
-                            relative w-full bg-transparent caret-black dark:caret-white
-                            placeholder:text-gray-500 dark:placeholder:text-gray-400
+                            relative w-full bg-transparent caret-black
+                            placeholder:text-gray-500
                             focus:outline-none resize-none ${singleLine ? 'overflow-x-auto overflow-y-hidden' : 'overflow-hidden'}
                             ${className}
                         `}

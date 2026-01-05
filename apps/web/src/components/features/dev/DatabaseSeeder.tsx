@@ -131,12 +131,12 @@ export function DatabaseSeeder() {
     };
 
     return (
-        <div className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm max-w-lg mx-auto">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Database Seeder</h2>
+        <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm max-w-lg mx-auto">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Database Seeder</h2>
 
             <div className="space-y-4 mb-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Generate Data</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Generate Data</label>
                     <div className="flex gap-4">
                         <button
                             onClick={() => handleSeed(1)}
@@ -162,7 +162,7 @@ export function DatabaseSeeder() {
                     </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                <div className="pt-4 border-t border-gray-100 space-y-3">
                     <button
                         onClick={handleSyncStats}
                         disabled={isSeeding || isDeleting || isSyncing}
@@ -183,11 +183,11 @@ export function DatabaseSeeder() {
                 </div>
             </div>
 
-            <div className="bg-gray-100 dark:bg-gray-950 p-4 rounded-lg h-60 overflow-y-auto text-xs font-mono border border-gray-200 dark:border-gray-800 custom-scrollbar">
+            <div className="bg-gray-100 p-4 rounded-lg h-60 overflow-y-auto text-xs font-mono border border-gray-200 custom-scrollbar">
                 {log.length === 0 ? (
                     <span className="text-gray-400 italic">Ready.</span>
                 ) : (
-                    log.map((entry, i) => <div key={i} className="mb-1 text-gray-700 dark:text-gray-300 border-b border-gray-200/50 pb-1 last:border-0">{entry}</div>)
+                    log.map((entry, i) => <div key={i} className="mb-1 text-gray-700 border-b border-gray-200/50 pb-1 last:border-0">{entry}</div>)
                 )}
             </div>
         </div>

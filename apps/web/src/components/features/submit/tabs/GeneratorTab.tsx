@@ -29,7 +29,7 @@ export function GeneratorTab({ onGenerate }: GeneratorTabProps) {
 
     return (
         <div className="max-w-2xl mx-auto space-y-6" dir="rtl">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <h3 className="font-bold mb-2">מחולל שאלות (AI)</h3>
                 <p className="text-sm mb-4">
                     הזן נושא או הנחיות, והמערכת תיצור עבורך סט שאלות חדש.
@@ -41,7 +41,7 @@ export function GeneratorTab({ onGenerate }: GeneratorTabProps) {
                         type="password"
                         value={apiKey}
                         onChange={(e) => setApiKey(e.target.value)}
-                        className="w-full p-2 rounded border bg-white dark:bg-black border-gray-300 dark:border-gray-700 ltr"
+                        className="w-full p-2 rounded border bg-white border-gray-300 ltr"
                         placeholder="AIzaSy..."
                         dir="ltr"
                     />
@@ -54,7 +54,7 @@ export function GeneratorTab({ onGenerate }: GeneratorTabProps) {
                     <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full p-2 rounded border bg-white dark:bg-black border-gray-300 dark:border-gray-700"
+                        className="w-full p-2 rounded border bg-white border-gray-300"
                     >
                         <option value="quantitative">חשיבה כמותית</option>
                         <option value="verbal">חשיבה מילולית</option>
@@ -67,7 +67,7 @@ export function GeneratorTab({ onGenerate }: GeneratorTabProps) {
                     <textarea
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        className="w-full p-4 h-32 rounded border bg-white dark:bg-black border-gray-300 dark:border-gray-700"
+                        className="w-full p-4 h-32 rounded border bg-white border-gray-300"
                         placeholder="לדוגמה: צור 3 שאלות קשות בנושא גיאומטריה, משולשים ישרי זווית."
                     />
                 </div>

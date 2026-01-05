@@ -102,7 +102,7 @@ export function FilterPanel({ filters, fixedFilters = {}, totalCount, onChange, 
                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-500/30'
                 : disabled
                     ? 'bg-gray-100 text-gray-300 border-gray-200 cursor-not-allowed opacity-50'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:text-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600'
                 }`}
         >
             {label}
@@ -148,7 +148,7 @@ export function FilterPanel({ filters, fixedFilters = {}, totalCount, onChange, 
         }
     };
 
-    const sectionLabelClass = "text-xl md:text-base font-bold uppercase text-gray-700 dark:text-gray-300 tracking-wider flex items-center gap-2";
+    const sectionLabelClass = "text-xl md:text-base font-bold uppercase text-gray-700 tracking-wider flex items-center gap-2";
 
     // Subcategory Sorting
     const getSortedSubcategories = () => {
@@ -200,15 +200,15 @@ export function FilterPanel({ filters, fixedFilters = {}, totalCount, onChange, 
     }, []);
 
     return (
-        <div ref={panelRef} className="fixed inset-0 md:absolute md:top-16 md:bottom-auto md:left-0 md:right-0 z-50 md:z-20 bg-white dark:bg-gray-900 md:border-b border-gray-200 dark:border-gray-800 shadow-2xl md:border-t animate-in slide-in-from-bottom-10 md:slide-in-from-top-2 duration-200 md:ring-1 ring-black/5 dark:ring-white/10 flex flex-col md:max-h-[80vh]">
+        <div ref={panelRef} className="fixed inset-0 md:absolute md:top-16 md:bottom-auto md:left-0 md:right-0 z-50 md:z-20 bg-white md:border-b border-gray-200 shadow-2xl md:border-t animate-in slide-in-from-bottom-10 md:slide-in-from-top-2 duration-200 md:ring-1 ring-black/5 flex flex-col md:max-h-[80vh]">
 
             {/* Sticky Header */}
-            <div className="sticky top-0 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 p-4 shrink-0 shadow-sm">
+            <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100 p-4 shrink-0 shadow-sm">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white hidden md:block">סינון מתקדם</h2>
+                        <h2 className="text-xl font-bold text-gray-900 hidden md:block">סינון מתקדם</h2>
                         {totalCount !== undefined && (
-                            <span className="text-base md:text-lg font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 md:px-4 md:py-1.5 rounded-full whitespace-nowrap">
+                            <span className="text-base md:text-lg font-bold text-blue-600 bg-blue-50 px-3 py-1 md:px-4 md:py-1.5 rounded-full whitespace-nowrap">
                                 {totalCount} תוצאות
                             </span>
                         )}
@@ -217,13 +217,13 @@ export function FilterPanel({ filters, fixedFilters = {}, totalCount, onChange, 
                     <div className="flex items-center gap-2 md:gap-4">
                         <button
                             onClick={() => onChange({})}
-                            className="text-sm text-red-500 hover:text-red-700 font-bold px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-all whitespace-nowrap"
+                            className="text-sm text-red-500 hover:text-red-700 font-bold px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all whitespace-nowrap"
                         >
                             נקה הכל
                         </button>
                         <button
                             onClick={onClose}
-                            className="p-2 -ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                            className="p-2 -ml-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-all"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -249,7 +249,7 @@ export function FilterPanel({ filters, fixedFilters = {}, totalCount, onChange, 
                                 <select
                                     value={filters.timeRange || 'all'}
                                     onChange={(e) => handleTimeRangeChange(e.target.value as any)}
-                                    className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-lg md:text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+                                    className="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 text-lg md:text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
                                 >
                                     <option value="all">הכל</option>
                                     <option value="today">היום</option>
@@ -322,7 +322,7 @@ export function FilterPanel({ filters, fixedFilters = {}, totalCount, onChange, 
                     </div>
 
                     {/* Bottom Grid: Category, Subcategory, Topic */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4 border-t border-gray-100">
 
                         {/* Category (Moved here) */}
                         {!fixedFilters.category && (
@@ -348,9 +348,9 @@ export function FilterPanel({ filters, fixedFilters = {}, totalCount, onChange, 
                         {!fixedFilters.subcategory && (filters.category || fixedFilters.category) && (
                             <div className="space-y-4">
                                 <label className={sectionLabelClass}>תת-קטגוריה</label>
-                                <div className="max-h-48 overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                                <div className="max-h-48 overflow-y-auto space-y-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
                                     {getSortedSubcategories().map(sub => (
-                                        <label key={sub.value} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all hover:bg-white dark:hover:bg-gray-700 ${!isOptionEnabled('subcategory', sub.value) ? 'opacity-30' : ''}`}>
+                                        <label key={sub.value} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all hover:bg-white ${!isOptionEnabled('subcategory', sub.value) ? 'opacity-30' : ''}`}>
                                             <input
                                                 type="checkbox"
                                                 checked={Array.isArray(filters.subcategory) ? filters.subcategory.includes(sub.value) : filters.subcategory === sub.value}
@@ -371,9 +371,9 @@ export function FilterPanel({ filters, fixedFilters = {}, totalCount, onChange, 
                         {(filters.category === 'quantitative' || fixedFilters.category === 'quantitative') && (
                             <div className="space-y-4">
                                 <label className={sectionLabelClass}>נושא</label>
-                                <div className="max-h-48 overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                                <div className="max-h-48 overflow-y-auto space-y-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
                                     {getSortedTopics().map(topic => (
-                                        <label key={topic.value} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all hover:bg-white dark:hover:bg-gray-700 ${!isOptionEnabled('topic', topic.value) ? 'opacity-30' : ''}`}>
+                                        <label key={topic.value} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all hover:bg-white ${!isOptionEnabled('topic', topic.value) ? 'opacity-30' : ''}`}>
                                             <input
                                                 type="checkbox"
                                                 checked={Array.isArray(filters.topic) ? filters.topic.includes(topic.value) : filters.topic === topic.value}

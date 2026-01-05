@@ -455,3 +455,67 @@ export async function recalculateStatistics() {
     }
 }
 
+
+/**
+ * Retrieves the user's saved Gemini API Key.
+ * Stored in `admin_users/{email}`.
+ */
+export async function getUserApiKey(email: string): Promise<string | null> {
+    try {
+        const docRef = doc(db, "admin_users", email);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data().geminiApiKey || null;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching API key:", error);
+        return null; // Don't throw, just return null if fail (or handle appropriately)
+    }
+}
+
+/**
+ * Saves the user's Gemini API Key.
+ */
+export async function saveUserApiKey(email: string, apiKey: string): Promise<void> {
+    try {
+        const docRef = doc(db, "admin_users", email);
+        // Use set with merge: true to avoid overwriting other user data/permissions
+        await import("firebase/firestore").then(mod => mod.setDoc(docRef, { geminiApiKey: apiKey }, { merge: true }));
+    } catch (error) {
+        console.error("Error saving API key:", error);
+        throw error;
+    }
+}
+
+/**
+ * Retrieves the global prompts configuration.
+ * Stored in `settings/prompts`.
+ */
+export async function getGlobalPrompts(): Promise<{ base_prompt: string, categories: Record<string, string> }> {
+    try {
+        const docRef = doc(db, "settings", "prompts");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data() as any;
+        }
+        // Return default structure if empty
+        return { base_prompt: '', categories: {} };
+    } catch (error) {
+        console.error("Error fetching global prompts:", error);
+        return { base_prompt: '', categories: {} };
+    }
+}
+
+/**
+ * Saves the global prompts configuration.
+ */
+export async function saveGlobalPrompts(prompts: { base_prompt: string, categories: Record<string, string> }): Promise<void> {
+    try {
+        const docRef = doc(db, "settings", "prompts");
+        await import("firebase/firestore").then(mod => mod.setDoc(docRef, prompts));
+    } catch (error) {
+        console.error("Error saving global prompts:", error);
+        throw error;
+    }
+}
