@@ -259,161 +259,214 @@ export function QuestionsTable({
         setQuestionsToExport(selectedQuestions as QuestionSet[]);
         setIsExporting(true);
 
-        const { snapdom } = await import('@zumer/snapdom');
+        const { toPng } = await import('html-to-image');
         const { jsPDF } = await import('jspdf');
+        
+        // --- Export Logic ---
+        
+        // We'll try to find the container with retries to give React time to render it
+        const getContainer = async () => {
+            for (let i = 0; i < 20; i++) {
+                const el = document.getElementById('printable-area');
+                if (el) return el;
+                await new Promise(r => setTimeout(r, 100));
+            }
+            return null;
+        };
 
-        // Allow render to complete
-        setTimeout(async () => {
-            try {
-                const container = document.getElementById('printable-area');
-                if (!container) {
-                    setIsExporting(false);
-                    return;
-                }
+        const container = await getContainer();
+        if (!container) {
+            setIsExporting(false);
+            alert('שגיאה: אזור ההדפסה לא נמצא. נסה שוב.');
+            return;
+        }
 
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                const margin = 10;
-                const contentWidth = pageWidth - (margin * 2);
-                let currentY = margin;
+        try {
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 10;
+            const contentWidth = pageWidth - (margin * 2);
+            let currentY = margin;
 
-                /**
-                 * Helper to capture and add an element to PDF
-                 */
-                const addElementToPdf = async (element: HTMLElement | null, spacingAfter = 0) => {
-                    if (!element) return;
+            /**
+             * Helper to wait for all images to be fully loaded
+             */
+            const waitForAllImages = async (container: HTMLElement) => {
+                const images = Array.from(container.querySelectorAll('img'));
+                console.log(`Waiting for ${images.length} images...`);
+                if (images.length === 0) return;
+
+                await Promise.all(images.map((img, i) => {
+                    if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+                    return new Promise(resolve => {
+                        img.onload = () => { console.log(`Image ${i+1} loaded`); resolve(null); };
+                        img.onerror = () => { console.warn(`Image ${i+1} FAILED`); resolve(null); };
+                        setTimeout(resolve, 8000); 
+                    });
+                }));
+            };
+
+            /**
+             * Helper to pre-load images as Base64.
+             */
+            const embedImagesRecursively = async (element: HTMLElement) => {
+                const images = Array.from(element.querySelectorAll('img'));
+                console.log(`Embedding ${images.length} images as Base64...`);
+                
+                for (const img of images) {
+                    if (!img.src || img.src.startsWith('data:')) continue;
+                    
                     try {
-                        // Capture as JPEG with 0.95 quality using Snapdom
-                        // Snapdom has better mobile browser compatibility, especially for Safari
-                        const imgElement = await snapdom.toJpeg(element, {
-                            quality: 0.95,
-                            backgroundColor: '#ffffff',
-<<<<<<< HEAD
-                            scale: 1.5, // Improves clarity without excessive file size
-=======
-                            pixelRatio: 2.0, // Reduced from 2.5 for better mobile performance
-                            skipFonts: true, // Bypass font embedding to prevent "trim" errors in production
-                            // cacheBust removed to support signed URLs
->>>>>>> b895a05e0fa81e2b2471520c7128913d25bbd97c
+                        const response = await fetch(img.src, { mode: 'cors', cache: 'force-cache' });
+                        const blob = await response.blob();
+                        const base64 = await new Promise<string | null>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result as string);
+                            reader.onerror = () => resolve(null);
+                            reader.readAsDataURL(blob);
                         });
-                        
-                        // Extract data URL from the image element's src
-                        const dataUrl = imgElement.src;
 
-                        const imgProps = pdf.getImageProperties(dataUrl);
-                        let imgHeight = (imgProps.height * contentWidth) / imgProps.width;
-                        let finalWidth = contentWidth;
+                        if (base64) {
+                            img.src = base64;
+                            img.srcset = '';
+                        }
+                    } catch (err) {
+                        console.warn('Fetch fallback to canvas:', img.src);
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.naturalWidth || img.width;
+                            canvas.height = img.naturalHeight || img.height;
+                            const ctx = canvas.getContext('2d');
+                            if (ctx && canvas.width > 0) {
+                                ctx.drawImage(img, 0, 0);
+                                img.src = canvas.toDataURL('image/png');
+                                img.srcset = '';
+                            }
+                        } catch (e) {
+                            console.error('Canvas fail:', e);
+                        }
+                    }
+                }
+            };
 
-                        // Check for page break
-                        if (currentY + imgHeight > pageHeight - margin) {
-                            // Fix for "Orphaned Title" issue:
-                            // If we are near the top (e.g., just after title), and the image is just too big,
-                            // we try to scale it down to fit the first page instead of breaking.
-                            const availableSpace = pageHeight - margin - currentY;
-                            const isNearTop = currentY < pageHeight * 0.25; // First quarter of page (likely just title)
+            const addElementToPdf = async (element: HTMLElement | null, spacingAfter = 0, label = 'element') => {
+                if (!element) return;
+                console.log(`Capturing ${label}...`);
+                try {
+                    const dataUrl = await toPng(element, {
+                        quality: 0.95,
+                        backgroundColor: '#ffffff',
+                        pixelRatio: 1.0, 
+                        skipFonts: true, 
+                        cacheBust: false, // We already handled this
+                        style: {
+                            // Ensure it's not hidden during capture in some browsers
+                            opacity: '1',
+                            visibility: 'visible'
+                        }
+                    });
 
-                            // If we are near top, and scaling it down allows it to fit (with some reasonable limit e.g. 70% orig size)
-                            if (isNearTop && availableSpace > 50 && imgHeight > availableSpace) {
-                                // Check if scaling to available space is reasonable (e.g. not squashing it to a tiny line)
-                                const scaleFactor = availableSpace / imgHeight;
-                                // If we don't scale too aggressively (keep at least 65% size), do it.
-                                if (scaleFactor > 0.65) {
-                                    imgHeight = availableSpace;
-                                    // Recalculate width to maintain aspect ratio (optional, but PDF addImage typically takes w/h)
-                                    // Actually addImage stretches if we give both. We should adjust width to keep ratio?
-                                    // No, we usually want full width. If we shrink height, we should shrink width to keep ratio, or center it.
-                                    // Let's shrink width proportional to height to maintain aspect ratio.
-                                    finalWidth = contentWidth * scaleFactor;
-                                } else {
-                                    // Too big to fit even with scaling. We MUST break.
-                                    // But currentY > margin is true.
-                                    if (currentY > margin) {
-                                        pdf.addPage();
-                                        currentY = margin;
-                                        // If it still doesn't fit on a fresh page, we might need to scale it to fit the page
-                                        if (imgHeight > pageHeight - (margin * 2)) {
-                                            const maxPageHeight = pageHeight - (margin * 2);
-                                            const pageScale = maxPageHeight / imgHeight;
-                                            imgHeight = maxPageHeight;
-                                            finalWidth = contentWidth * pageScale;
-                                        }
-                                    }
-                                }
+                    const imgProps = pdf.getImageProperties(dataUrl);
+                    let imgHeight = (imgProps.height * contentWidth) / imgProps.width;
+                    let finalWidth = contentWidth;
+
+                    if (currentY + imgHeight > pageHeight - margin) {
+                        const availableSpace = pageHeight - margin - currentY;
+                        const isNearTop = currentY < pageHeight * 0.25;
+
+                        if (isNearTop && availableSpace > 50 && imgHeight > availableSpace) {
+                            const scaleFactor = availableSpace / imgHeight;
+                            if (scaleFactor > 0.65) {
+                                imgHeight = availableSpace;
+                                finalWidth = contentWidth * scaleFactor;
                             } else if (currentY > margin) {
-                                // Normal break behavior
                                 pdf.addPage();
                                 currentY = margin;
                             }
+                        } else if (currentY > margin) {
+                            pdf.addPage();
+                            currentY = margin;
                         }
-
-                        // Center the image if width was reduced
-                        const xOffset = margin + (contentWidth - finalWidth) / 2;
-                        pdf.addImage(dataUrl, 'JPEG', xOffset, currentY, finalWidth, imgHeight);
-                        currentY += imgHeight + spacingAfter;
-                    } catch (err) {
-                        console.warn('Skipped element export:', err);
                     }
-                };
 
-                // --- 1. Title ---
-                const titleEl = document.getElementById('export-questions-section')?.querySelector('h1');
-                await addElementToPdf(titleEl as HTMLElement, 5);
-
-                // --- 2. Questions ---
-                const questionElements = Array.from(document.querySelectorAll('.export-question-item'));
-                for (let i = 0; i < questionElements.length; i++) {
-                    const el = questionElements[i] as HTMLElement;
-                    await addElementToPdf(el, 0); // Spacing handled by CSS margin capture
-
-                    // Force Page Break if requested by the template - only if not already top of page
-                    if (el.dataset.breakAfter === 'true' && currentY > margin) {
-                        pdf.addPage();
-                        currentY = margin;
-                    }
+                    const xOffset = margin + (contentWidth - finalWidth) / 2;
+                    pdf.addImage(dataUrl, 'PNG', xOffset, currentY, finalWidth, imgHeight);
+                    currentY += imgHeight + spacingAfter;
+                    
+                    await new Promise(r => setTimeout(r, 100)); // Longer delay for stability
+                } catch (err) {
+                    console.error(`FAILED CAPTURE OF ${label}:`, err);
                 }
+            };
 
-                // Force Page Break after Questions (Part 1 -> Part 2) - only if not already top of page
-                if (currentY > margin) {
+            // --- Export Flow ---
+            
+            // 1. Wait for images
+            await waitForAllImages(container);
+            
+            // 2. Embed images
+            await embedImagesRecursively(container);
+            
+            // 3. Render delay
+            await new Promise(r => setTimeout(r, 1000));
+
+            // 4. Capture pieces
+            await addElementToPdf(document.getElementById('export-questions-section')?.querySelector('h1') as HTMLElement, 5, 'Title');
+
+            const questionElements = Array.from(document.querySelectorAll('.export-question-item'));
+            for (let i = 0; i < questionElements.length; i++) {
+                const el = questionElements[i] as HTMLElement;
+                await addElementToPdf(el, 0, `Question ${i+1}`);
+                if (el.dataset.breakAfter === 'true' && currentY > margin) {
                     pdf.addPage();
                     currentY = margin;
                 }
-
-                // --- 3. Answer Key ---
-                // We add a bit of spacing before the answer key if it's on the same page
-                if (currentY > margin && currentY + 40 < pageHeight) { // Heuristic check if worth adding spacing
-                    currentY += 10;
-                }
-
-                const answersTitle = document.getElementById('export-answers-section')?.querySelector('h2');
-                await addElementToPdf(answersTitle as HTMLElement, 5);
-
-                const answersGrid = document.getElementById('export-answers-grid');
-                await addElementToPdf(answersGrid as HTMLElement, 15);
-
-                // --- 4. Explanations ---
-                const explanationsTitle = document.getElementById('export-explanations-section')?.querySelector('h2');
-                await addElementToPdf(explanationsTitle as HTMLElement, 5);
-
-                const explanationElements = Array.from(document.querySelectorAll('.export-explanation-item'));
-                for (let i = 0; i < explanationElements.length; i++) {
-                    await addElementToPdf(explanationElements[i] as HTMLElement, 0);
-                }
-
-                pdf.save(`questions-export-${new Date().toISOString().slice(0, 10)}.pdf`);
-                setIsExporting(false);
-            } catch (err: unknown) {
-                console.error('Export failed:', err);
-                setIsExporting(false);
             }
-        }, 2000); // 2s timeout for reliable asset loading
+
+            if (currentY > margin) { pdf.addPage(); currentY = margin; }
+
+            const answersTitle = document.getElementById('export-answers-section')?.querySelector('h2');
+            await addElementToPdf(answersTitle as HTMLElement, 5, 'Answers Title');
+
+            const answersGrid = document.getElementById('export-answers-grid');
+            await addElementToPdf(answersGrid as HTMLElement, 15, 'Answers Grid');
+
+            const explanationsTitle = document.getElementById('export-explanations-section')?.querySelector('h2');
+            await addElementToPdf(explanationsTitle as HTMLElement, 5, 'Explanations Title');
+
+            const explanationElements = Array.from(document.querySelectorAll('.export-explanation-item'));
+            for (let i = 0; i < explanationElements.length; i++) {
+                await addElementToPdf(explanationElements[i] as HTMLElement, 0, `Explanation ${i+1}`);
+            }
+
+            pdf.save(`questions-export-${new Date().toISOString().slice(0, 10)}.pdf`);
+            setIsExporting(false);
+            alert('הייצוא הושלם בהצלחה!');
+        } catch (err: unknown) {
+            console.error('Export overall error:', err);
+            setIsExporting(false);
+            alert('שגיאה בתהליך הייצוא: ' + (err instanceof Error ? err.message : String(err)));
+        }
     };
 
     return (
         <div className="space-y-4 relative">
-            {/* Hidden Printable Component - Offscreen but rendered */}
+            {/* Rendered off-screen to ensure browser paints it for capture. 
+                Using opacity-0 instead of z-index/-1 in some cases helps Safari. */}
             {isExporting && questionsToExport.length > 0 && (
-                <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '800px' }}>
+                <div 
+                    id="export-container-wrapper"
+                    style={{ 
+                        position: 'absolute', 
+                        top: '-10000px', 
+                        left: '0', 
+                        width: '800px', 
+                        background: 'white',
+                        opacity: 1,
+                        visibility: 'visible'
+                    }}
+                >
                     <ExportTemplate questions={questionsToExport} />
                 </div>
             )}
