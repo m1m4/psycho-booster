@@ -259,7 +259,7 @@ export function QuestionsTable({
         setQuestionsToExport(selectedQuestions as QuestionSet[]);
         setIsExporting(true);
 
-        const { toJpeg } = await import('html-to-image');
+        const { snapdom } = await import('@zumer/snapdom');
         const { jsPDF } = await import('jspdf');
 
         // Allow render to complete
@@ -284,13 +284,16 @@ export function QuestionsTable({
                 const addElementToPdf = async (element: HTMLElement | null, spacingAfter = 0) => {
                     if (!element) return;
                     try {
-                        // Capture as JPEG with 0.95 quality for significant size reduction vs PNG
-                        const dataUrl = await toJpeg(element, {
+                        // Capture as JPEG with 0.95 quality using Snapdom
+                        // Snapdom has better mobile browser compatibility, especially for Safari
+                        const imgElement = await snapdom.toJpeg(element, {
                             quality: 0.95,
                             backgroundColor: '#ffffff',
-                            pixelRatio: 1.5, // Reduced from 2.0 to save size, readable enough
-                            skipFonts: true, // Bypass font embedding to prevent "trim" errors in production
+                            scale: 1.5, // Improves clarity without excessive file size
                         });
+                        
+                        // Extract data URL from the image element's src
+                        const dataUrl = imgElement.src;
 
                         const imgProps = pdf.getImageProperties(dataUrl);
                         let imgHeight = (imgProps.height * contentWidth) / imgProps.width;
