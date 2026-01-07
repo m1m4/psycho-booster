@@ -17,6 +17,7 @@ export function Navbar() {
     const navItems = [
         { label: 'בית', href: '/' },
         { label: 'הוספה', href: '/submit' },
+        { label: 'מצב בוחן', href: '/exam' },
         { label: 'תיבת דואר', href: '/inbox' },
         { label: 'צפייה', href: '/viewer' },
         { label: 'פיתוח', href: '/dev' },
