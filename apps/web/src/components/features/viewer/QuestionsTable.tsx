@@ -289,7 +289,13 @@ export function QuestionsTable({
                         const imgElement = await snapdom.toJpeg(element, {
                             quality: 0.95,
                             backgroundColor: '#ffffff',
+<<<<<<< HEAD
                             scale: 1.5, // Improves clarity without excessive file size
+=======
+                            pixelRatio: 2.0, // Reduced from 2.5 for better mobile performance
+                            skipFonts: true, // Bypass font embedding to prevent "trim" errors in production
+                            // cacheBust removed to support signed URLs
+>>>>>>> b895a05e0fa81e2b2471520c7128913d25bbd97c
                         });
                         
                         // Extract data URL from the image element's src
