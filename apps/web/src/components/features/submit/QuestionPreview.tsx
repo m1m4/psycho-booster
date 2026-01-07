@@ -22,11 +22,11 @@ export const useResponsiveFontSize = (text: string, baseSize = 'text-lg') => {
     return useMemo(() => {
         if (!text) return baseSize;
         const len = text.length;
-        if (len < 45) return 'text-xl leading-relaxed'; // Reduced from 2xl, user requested 45
-        if (len < 120) return 'text-lg leading-relaxed'; // Reduced from xl
-        if (len > 400) return 'text-xs leading-relaxed'; // Reduced from sm
-        if (len > 250) return 'text-sm leading-relaxed'; // Reduced from base
-        return 'text-base leading-relaxed'; // Standard reduced to base
+        if (len < 45) return 'text-lg leading-relaxed'; // Reduced from xl
+        if (len < 120) return 'text-base leading-relaxed'; // Reduced from lg
+        if (len > 400) return 'text-[10px] leading-relaxed'; // Reduced from xs
+        if (len > 250) return 'text-xs leading-relaxed'; // Reduced from sm
+        return 'text-sm leading-relaxed'; // Standard reduced to sm
     }, [text, baseSize]);
 };
 
@@ -165,7 +165,7 @@ export function QuestionPreview({ formData, isEnglish, hideCorrectAnswer = false
             <PreviewImage
                 src={assetSrc}
                 alt="Asset"
-                className={`${isExport ? 'max-h-none h-auto w-full' : 'max-h-60 h-auto w-auto'} object-contain rounded-lg mb-4 mx-auto cursor-zoom-in hover:opacity-90 transition-opacity shadow-md`}
+                className={`${isExport ? 'max-h-[450px] h-auto w-auto max-w-full' : 'max-h-60 h-auto w-auto'} object-contain rounded-lg mb-4 mx-auto cursor-zoom-in hover:opacity-90 transition-opacity shadow-md`}
                 onClick={setLightboxImage}
                 title="Click to zoom"
                 useCors={isExport}
@@ -219,8 +219,8 @@ export function QuestionPreview({ formData, isEnglish, hideCorrectAnswer = false
 
             {/* Header info - Only show in full or question mode, but hide for specific export questions */}
             {viewMode !== 'explanation_only' && !(isExport && viewMode === 'question_only') && (
-                <div className="border-b border-gray-200 pb-2 mb-2 w-full flex items-center justify-between gap-4">
-                    <h2 className="text-lg md:text-xl font-bold text-gray-900 whitespace-nowrap truncate">
+                <div className={`border-b border-gray-200 ${isExport ? 'pb-1 mb-1' : 'pb-2 mb-2'} w-full flex items-center justify-between gap-4`}>
+                    <h2 className={`${isExport ? 'text-base' : 'text-lg md:text-xl'} font-bold text-gray-900 whitespace-nowrap truncate`}>
                         {CATEGORY_LABELS[formData.category] || formData.category} - {
                             Object.values(SUBCATEGORY_OPTIONS)
                                 .flat()
@@ -328,7 +328,7 @@ export function QuestionPreview({ formData, isEnglish, hideCorrectAnswer = false
 
                             {/* Answers Grid - Show in full or question_only */}
                             {viewMode !== 'explanation_only' && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                                <div className={`grid gap-4 w-full ${isExport ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
                                     {[1, 2, 3, 4].map((num) => {
                                         const qAny = currentQuestion as any;
                                         const answerKey = `answer${num}`;

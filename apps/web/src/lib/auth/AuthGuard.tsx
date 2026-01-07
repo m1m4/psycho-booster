@@ -10,7 +10,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
-        if (!loading && !user && pathname !== "/login") {
+        // Skip auth check for login and print pages
+        if (!loading && !user && pathname !== "/login" && pathname !== "/print") {
             router.push("/login");
         }
     }, [user, loading, router, pathname]);
@@ -26,8 +27,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         );
     }
 
-    // Allow access to login page
-    if (pathname === "/login") {
+    // Allow access to login and print pages
+    if (pathname === "/login" || pathname === "/print") {
         return <>{children}</>;
     }
 

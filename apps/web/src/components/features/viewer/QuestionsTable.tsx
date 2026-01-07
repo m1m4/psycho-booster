@@ -9,7 +9,6 @@ import { CATEGORY_LABELS } from '@/components/features/submit/QuestionPreview';
 import { StatisticsPanel } from './StatisticsPanel';
 import { FilterPanel } from './FilterPanel';
 
-import { ExportTemplate } from './ExportTemplate';
 
 const DIFFICULTY_ORDER = { easy: 1, medium: 2, hard: 3 };
 const STATUS_ORDER = { pending: 1, initial: 2, approved: 3 };
@@ -37,10 +36,6 @@ export function QuestionsTable({
     showApproveButton = false
 }: QuestionsTableProps) {
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: SortDirection }>({ key: 'createdAt', direction: 'desc' });
-
-    // Export State
-    const [isExporting, setIsExporting] = useState(false);
-    const [questionsToExport, setQuestionsToExport] = useState<QuestionSet[]>([]);
 
     // Filter State
     const [showFilters, setShowFilters] = useState(false);
@@ -252,224 +247,26 @@ export function QuestionsTable({
         return <div className="text-red-500 p-4 font-mono text-xs overflow-auto max-w-full">{msg}</div>;
     };
 
-    const handleExport = async () => {
+    const handleExport = () => {
         if (selectedIds.size === 0) return;
 
         const selectedQuestions = questionsToDisplay.filter(q => selectedIds.has(q.id));
-        setQuestionsToExport(selectedQuestions as QuestionSet[]);
-        setIsExporting(true);
-
-        const { toPng } = await import('html-to-image');
-        const { jsPDF } = await import('jspdf');
         
-        // --- Export Logic ---
-        
-        // We'll try to find the container with retries to give React time to render it
-        const getContainer = async () => {
-            for (let i = 0; i < 20; i++) {
-                const el = document.getElementById('printable-area');
-                if (el) return el;
-                await new Promise(r => setTimeout(r, 100));
-            }
-            return null;
-        };
-
-        const container = await getContainer();
-        if (!container) {
-            setIsExporting(false);
-            alert('שגיאה: אזור ההדפסה לא נמצא. נסה שוב.');
+        // Store questions in sessionStorage for the print page to read
+        try {
+            sessionStorage.setItem('exportQuestions', JSON.stringify(selectedQuestions));
+        } catch (err) {
+            console.error('Failed to store questions for export:', err);
+            alert('שגיאה בהכנת הייצוא. נסה עם פחות שאלות.');
             return;
         }
-
-        try {
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            const margin = 10;
-            const contentWidth = pageWidth - (margin * 2);
-            let currentY = margin;
-
-            /**
-             * Helper to wait for all images to be fully loaded
-             */
-            const waitForAllImages = async (container: HTMLElement) => {
-                const images = Array.from(container.querySelectorAll('img'));
-                console.log(`Waiting for ${images.length} images...`);
-                if (images.length === 0) return;
-
-                await Promise.all(images.map((img, i) => {
-                    if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
-                    return new Promise(resolve => {
-                        img.onload = () => { console.log(`Image ${i+1} loaded`); resolve(null); };
-                        img.onerror = () => { console.warn(`Image ${i+1} FAILED`); resolve(null); };
-                        setTimeout(resolve, 8000); 
-                    });
-                }));
-            };
-
-            /**
-             * Helper to pre-load images as Base64.
-             */
-            const embedImagesRecursively = async (element: HTMLElement) => {
-                const images = Array.from(element.querySelectorAll('img'));
-                console.log(`Embedding ${images.length} images as Base64...`);
-                
-                for (const img of images) {
-                    if (!img.src || img.src.startsWith('data:')) continue;
-                    
-                    try {
-                        const response = await fetch(img.src, { mode: 'cors', cache: 'force-cache' });
-                        const blob = await response.blob();
-                        const base64 = await new Promise<string | null>((resolve) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve(reader.result as string);
-                            reader.onerror = () => resolve(null);
-                            reader.readAsDataURL(blob);
-                        });
-
-                        if (base64) {
-                            img.src = base64;
-                            img.srcset = '';
-                        }
-                    } catch (err) {
-                        console.warn('Fetch fallback to canvas:', img.src);
-                        try {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = img.naturalWidth || img.width;
-                            canvas.height = img.naturalHeight || img.height;
-                            const ctx = canvas.getContext('2d');
-                            if (ctx && canvas.width > 0) {
-                                ctx.drawImage(img, 0, 0);
-                                img.src = canvas.toDataURL('image/png');
-                                img.srcset = '';
-                            }
-                        } catch (e) {
-                            console.error('Canvas fail:', e);
-                        }
-                    }
-                }
-            };
-
-            const addElementToPdf = async (element: HTMLElement | null, spacingAfter = 0, label = 'element') => {
-                if (!element) return;
-                console.log(`Capturing ${label}...`);
-                try {
-                    const dataUrl = await toPng(element, {
-                        quality: 0.95,
-                        backgroundColor: '#ffffff',
-                        pixelRatio: 1.0, 
-                        skipFonts: true, 
-                        cacheBust: false, // We already handled this
-                        style: {
-                            // Ensure it's not hidden during capture in some browsers
-                            opacity: '1',
-                            visibility: 'visible'
-                        }
-                    });
-
-                    const imgProps = pdf.getImageProperties(dataUrl);
-                    let imgHeight = (imgProps.height * contentWidth) / imgProps.width;
-                    let finalWidth = contentWidth;
-
-                    if (currentY + imgHeight > pageHeight - margin) {
-                        const availableSpace = pageHeight - margin - currentY;
-                        const isNearTop = currentY < pageHeight * 0.25;
-
-                        if (isNearTop && availableSpace > 50 && imgHeight > availableSpace) {
-                            const scaleFactor = availableSpace / imgHeight;
-                            if (scaleFactor > 0.65) {
-                                imgHeight = availableSpace;
-                                finalWidth = contentWidth * scaleFactor;
-                            } else if (currentY > margin) {
-                                pdf.addPage();
-                                currentY = margin;
-                            }
-                        } else if (currentY > margin) {
-                            pdf.addPage();
-                            currentY = margin;
-                        }
-                    }
-
-                    const xOffset = margin + (contentWidth - finalWidth) / 2;
-                    pdf.addImage(dataUrl, 'PNG', xOffset, currentY, finalWidth, imgHeight);
-                    currentY += imgHeight + spacingAfter;
-                    
-                    await new Promise(r => setTimeout(r, 100)); // Longer delay for stability
-                } catch (err) {
-                    console.error(`FAILED CAPTURE OF ${label}:`, err);
-                }
-            };
-
-            // --- Export Flow ---
-            
-            // 1. Wait for images
-            await waitForAllImages(container);
-            
-            // 2. Embed images
-            await embedImagesRecursively(container);
-            
-            // 3. Render delay
-            await new Promise(r => setTimeout(r, 1000));
-
-            // 4. Capture pieces
-            await addElementToPdf(document.getElementById('export-questions-section')?.querySelector('h1') as HTMLElement, 5, 'Title');
-
-            const questionElements = Array.from(document.querySelectorAll('.export-question-item'));
-            for (let i = 0; i < questionElements.length; i++) {
-                const el = questionElements[i] as HTMLElement;
-                await addElementToPdf(el, 0, `Question ${i+1}`);
-                if (el.dataset.breakAfter === 'true' && currentY > margin) {
-                    pdf.addPage();
-                    currentY = margin;
-                }
-            }
-
-            if (currentY > margin) { pdf.addPage(); currentY = margin; }
-
-            const answersTitle = document.getElementById('export-answers-section')?.querySelector('h2');
-            await addElementToPdf(answersTitle as HTMLElement, 5, 'Answers Title');
-
-            const answersGrid = document.getElementById('export-answers-grid');
-            await addElementToPdf(answersGrid as HTMLElement, 15, 'Answers Grid');
-
-            const explanationsTitle = document.getElementById('export-explanations-section')?.querySelector('h2');
-            await addElementToPdf(explanationsTitle as HTMLElement, 5, 'Explanations Title');
-
-            const explanationElements = Array.from(document.querySelectorAll('.export-explanation-item'));
-            for (let i = 0; i < explanationElements.length; i++) {
-                await addElementToPdf(explanationElements[i] as HTMLElement, 0, `Explanation ${i+1}`);
-            }
-
-            pdf.save(`questions-export-${new Date().toISOString().slice(0, 10)}.pdf`);
-            setIsExporting(false);
-            alert('הייצוא הושלם בהצלחה!');
-        } catch (err: unknown) {
-            console.error('Export overall error:', err);
-            setIsExporting(false);
-            alert('שגיאה בתהליך הייצוא: ' + (err instanceof Error ? err.message : String(err)));
-        }
+        
+        // Open the print page in a new tab
+        window.open('/print', '_blank');
     };
 
     return (
         <div className="space-y-4 relative">
-            {/* Rendered off-screen to ensure browser paints it for capture. 
-                Using opacity-0 instead of z-index/-1 in some cases helps Safari. */}
-            {isExporting && questionsToExport.length > 0 && (
-                <div 
-                    id="export-container-wrapper"
-                    style={{ 
-                        position: 'absolute', 
-                        top: '-10000px', 
-                        left: '0', 
-                        width: '800px', 
-                        background: 'white',
-                        opacity: 1,
-                        visibility: 'visible'
-                    }}
-                >
-                    <ExportTemplate questions={questionsToExport} />
-                </div>
-            )}
             {/* Statistics Panel with click-to-filter */}
             {showStatistics && (
                 <StatisticsPanel
@@ -517,17 +314,13 @@ export function QuestionsTable({
                     {/* Export Button */}
                     <button
                         onClick={handleExport}
-                        disabled={selectedIds.size === 0 || isExporting}
+                        disabled={selectedIds.size === 0}
                         className={`p-2 rounded-lg transition-all ${selectedIds.size > 0 ? 'text-blue-600 hover:bg-blue-50 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}
                         title={selectedIds.size > 0 ? 'ייצוא ל-PDF' : 'בחר פריטים לייצוא'}
                     >
-                        {isExporting ? (
-                            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                            <svg className="w-6 h-6 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                        )}
+                        <svg className="w-6 h-6 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
                     </button>
                     {/* Add Button */}
                     {showAddButton && (

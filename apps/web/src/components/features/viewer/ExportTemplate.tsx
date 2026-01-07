@@ -8,10 +8,10 @@ interface ExportTemplateProps {
 
 export function ExportTemplate({ questions }: ExportTemplateProps) {
     return (
-        <div id="printable-area" className="p-4 bg-white text-black w-[790px] mx-auto">
+        <div id="printable-area" className="p-4 bg-white text-black w-full max-w-full">
             {/* Part 1: Questions */}
             <div id="export-questions-section">
-                <h1 className="text-3xl font-bold mb-8 text-center border-b pb-4">מבחן לדוגמה</h1>
+                <h1 className={`text-lg font-bold mb-1 text-center border-b pb-1 pt-0 mt-0`}>מבחן לדוגמה</h1>
                 {questions.map((q, index) => {
                     const hasAsset = !!q.assetText || !!(q as any).assetImageUrl;
 
@@ -95,8 +95,8 @@ export function ExportTemplate({ questions }: ExportTemplateProps) {
                 })}
             </div>
 
-            {/* Part 2: Answer Key - Will be captured as a separate block */}
-            <div id="export-answers-section" className="mt-8">
+            {/* Part 2: Answer Key - Start on new page */}
+            <div id="export-answers-section" className="mt-8 page-break-before">
                 <h2 className="text-2xl font-bold mb-6 text-center border-b pb-2">מפתח תשובות</h2>
                 <div id="export-answers-grid" className="grid grid-cols-5 gap-4 text-sm p-1">
                     {questions.flatMap((q, index) =>
@@ -113,8 +113,8 @@ export function ExportTemplate({ questions }: ExportTemplateProps) {
                 </div>
             </div>
 
-            {/* Part 3: Explanations - Will be captured individually */}
-            <div id="export-explanations-section" className="mt-12">
+            {/* Part 3: Explanations - Immediately after answers */}
+            <div id="export-explanations-section" className="mt-8 border-t-2 border-gray-100 pt-8">
                 <h2 className="text-2xl font-bold mb-8 text-center border-b pb-4">הסברים</h2>
                 {questions.flatMap((q, index) =>
                     q.questions.map((subQ, subIndex) => {
@@ -153,6 +153,16 @@ export function ExportTemplate({ questions }: ExportTemplateProps) {
                 /* Ensure consistent rendering for capture */
                 .page-break-inside-avoid {
                     break-inside: avoid;
+                    page-break-inside: avoid;
+                }
+                .page-break-before {
+                    break-before: page;
+                    page-break-before: always;
+                }
+                /* Ensure header doesn't detach from content */
+                h1, h2 {
+                    break-after: avoid;
+                    page-break-after: avoid;
                 }
             ` }} />
         </div>

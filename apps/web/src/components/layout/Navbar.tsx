@@ -9,6 +9,11 @@ export function Navbar() {
     const pathname = usePathname();
     const { user } = useAuth();
 
+    // Hide navbar on print page
+    if (pathname === '/print') {
+        return null;
+    }
+
     const navItems = [
         { label: 'בית', href: '/' },
         { label: 'הוספה', href: '/submit' },
