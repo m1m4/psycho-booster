@@ -10,25 +10,37 @@ import { SUBCATEGORY_OPTIONS, TOPIC_OPTIONS } from '@/types/submit';
 interface StatisticsPanelProps {
     onStatusClick?: (status: string) => void;
     activeStatus?: string;
+    onCategoryClick?: (category: string) => void;
+    activeCategory?: string;
+    onSubcategoryClick?: (subcategory: string) => void;
+    activeSubcategory?: string | string[];
+    onTopicClick?: (topic: string) => void;
+    activeTopic?: string | string[];
 }
 
-export function StatisticsPanel({ onStatusClick, activeStatus }: StatisticsPanelProps) {
+export function StatisticsPanel({ 
+    onStatusClick, 
+    activeStatus,
+    onCategoryClick,
+    activeCategory,
+    onSubcategoryClick,
+    activeSubcategory,
+    onTopicClick,
+    activeTopic
+}: StatisticsPanelProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const queryClient = useQueryClient();
 
     const { data: stats, isLoading, isError } = useQuery({
         queryKey: ['statistics'],
         queryFn: getStatistics,
-        staleTime: 5 * 60 * 1000, // Consider data fresh for 5 mins as we have real-time updates
+        staleTime: 5 * 60 * 1000,
     });
 
     useEffect(() => {
-        // Subscribe to real-time updates
         const unsubscribe = subscribeToStatistics((newStats) => {
-            // Manually update the React Query cache when new data arrives
             queryClient.setQueryData(['statistics'], newStats);
         });
-
         return () => unsubscribe();
     }, [queryClient]);
 
@@ -37,17 +49,11 @@ export function StatisticsPanel({ onStatusClick, activeStatus }: StatisticsPanel
 
     const { totalQuestions = 0, byStatus = {}, byCategory = {}, bySubcategory = {}, byTopic = {} } = stats;
 
-    // Requested order: Approved -> Initial -> Pending
     const statusOrder = ['approved', 'initial', 'pending'];
     const statusLabels: Record<string, { label: string, color: string }> = {
         approved: { label: 'מאושר', color: 'bg-green-500' },
         initial: { label: 'בדיקה ראשונית', color: 'bg-blue-500' },
         pending: { label: 'ממתין לבדיקה', color: 'bg-orange-400' }
-    };
-
-    const getLabel = (value: string, options: any) => {
-        const option = Object.values(options).flat().find((opt: any) => opt.value === value) as any;
-        return option ? option.label : value;
     };
 
     const closeModal = () => setSelectedCategory(null);
@@ -94,14 +100,19 @@ export function StatisticsPanel({ onStatusClick, activeStatus }: StatisticsPanel
                 <div className="grid grid-cols-3 gap-4">
                     {Object.entries(CATEGORY_LABELS).map(([cat, label]) => {
                         const count = byCategory[cat] || 0;
+                        const isActive = activeCategory === cat;
                         return (
                             <button
                                 key={cat}
                                 onClick={() => setSelectedCategory(cat)}
-                                className="bg-gray-100 p-3 rounded-lg text-center hover:bg-gray-200 transition-colors cursor-pointer group"
+                                className={`p-3 rounded-lg text-center transition-all cursor-pointer group border ${isActive
+                                    ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-500/20'
+                                    : 'bg-gray-100 border-transparent hover:bg-gray-200'
+                                    }`}
+                                title="לחץ לפירוט וסינון"
                             >
-                                <div className="text-xs text-gray-500 mb-1 group-hover:text-gray-700">{label}</div>
-                                <div className="text-lg font-bold">{count as number}</div>
+                                <div className={`text-xs mb-1 ${isActive ? 'text-blue-700 font-medium' : 'text-gray-500 group-hover:text-gray-700'}`}>{label}</div>
+                                <div className={`text-lg font-bold ${isActive ? 'text-blue-700' : ''}`}>{count as number}</div>
                             </button>
                         );
                     })}
@@ -122,16 +133,44 @@ export function StatisticsPanel({ onStatusClick, activeStatus }: StatisticsPanel
                         </div>
 
                         <div className="space-y-6">
+                            {/* Filter by Main Category Button */}
+                            <button 
+                                onClick={() => {
+                                    onCategoryClick?.(selectedCategory);
+                                    closeModal();
+                                }}
+                                className={`w-full p-3 rounded-xl border text-center transition-all ${activeCategory === selectedCategory 
+                                    ? 'bg-blue-100 border-blue-300 text-blue-800 font-bold' 
+                                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'}`}
+                            >
+                                {activeCategory === selectedCategory ? 'הסר סינון קטגוריה' : `סנן לפי ${CATEGORY_LABELS[selectedCategory]}`}
+                            </button>
+
                             {/* Subcategories */}
                             <div>
                                 <h4 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">תתי נושאים</h4>
                                 <div className="grid grid-cols-1 gap-2">
-                                    {(SUBCATEGORY_OPTIONS[selectedCategory as keyof typeof SUBCATEGORY_OPTIONS] || []).map(opt => (
-                                        <div key={opt.value} className="flex justify-between p-3 bg-gray-50 rounded-xl">
-                                            <span className="text-sm font-medium">{opt.label}</span>
-                                            <span className="font-bold text-blue-600">{bySubcategory[opt.value] || 0}</span>
-                                        </div>
-                                    ))}
+                                    {(SUBCATEGORY_OPTIONS[selectedCategory as keyof typeof SUBCATEGORY_OPTIONS] || []).map(opt => {
+                                        const isActive = Array.isArray(activeSubcategory) 
+                                            ? activeSubcategory.includes(opt.value)
+                                            : activeSubcategory === opt.value;
+                                        return (
+                                            <button 
+                                                key={opt.value} 
+                                                onClick={() => {
+                                                    onSubcategoryClick?.(opt.value);
+                                                    closeModal();
+                                                }}
+                                                className={`flex justify-between p-3 rounded-xl w-full transition-all text-right ${isActive
+                                                    ? 'bg-blue-50 border border-blue-200 ring-1 ring-blue-500/20'
+                                                    : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
+                                                }`}
+                                            >
+                                                <span className={`text-sm font-medium ${isActive ? 'text-blue-800' : ''}`}>{opt.label}</span>
+                                                <span className={`font-bold ${isActive ? 'text-blue-600' : 'text-blue-600'}`}>{bySubcategory[opt.value] || 0}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -140,12 +179,27 @@ export function StatisticsPanel({ onStatusClick, activeStatus }: StatisticsPanel
                                 <div>
                                     <h4 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">נושאים (Topics)</h4>
                                     <div className="grid grid-cols-1 gap-2">
-                                        {(TOPIC_OPTIONS[selectedCategory as keyof typeof TOPIC_OPTIONS] || []).map(opt => (
-                                            <div key={opt.value} className="flex justify-between p-2 bg-blue-50/50 rounded-lg">
-                                                <span className="text-xs">{opt.label}</span>
-                                                <span className="font-bold text-xs">{byTopic[opt.value] || 0}</span>
-                                            </div>
-                                        ))}
+                                        {(TOPIC_OPTIONS[selectedCategory as keyof typeof TOPIC_OPTIONS] || []).map(opt => {
+                                            const isActive = Array.isArray(activeTopic)
+                                                ? activeTopic.includes(opt.value)
+                                                : activeTopic === opt.value;
+                                            return (
+                                                <button 
+                                                    key={opt.value} 
+                                                    onClick={() => {
+                                                        onTopicClick?.(opt.value);
+                                                        closeModal();
+                                                    }}
+                                                    className={`flex justify-between p-2 rounded-lg w-full transition-all text-right ${isActive
+                                                        ? 'bg-blue-100 border border-blue-200'
+                                                        : 'bg-blue-50/50 hover:bg-blue-50 border border-transparent'
+                                                    }`}
+                                                >
+                                                    <span className={`text-xs ${isActive ? 'text-blue-800 font-bold' : ''}`}>{opt.label}</span>
+                                                    <span className={`font-bold text-xs ${isActive ? 'text-blue-800' : ''}`}>{byTopic[opt.value] || 0}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}

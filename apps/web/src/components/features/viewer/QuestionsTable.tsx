@@ -272,12 +272,37 @@ export function QuestionsTable({
                 <StatisticsPanel
                     activeStatus={filters.status}
                     onStatusClick={(status) => {
-                        // Only allow toggling if it doesn't conflict with fixed filters
                         if (fixedFilters.status && fixedFilters.status !== status) return;
-
                         setFilters(prev => ({
                             ...prev,
                             status: prev.status === status ? undefined : status
+                        }));
+                    }}
+                    activeCategory={filters.category}
+                    onCategoryClick={(category) => {
+                         if (fixedFilters.category && fixedFilters.category !== category) return;
+                         setFilters(prev => ({
+                             ...prev,
+                             category: prev.category === category ? undefined : category,
+                             subcategory: undefined, // Clear sub-filters when changing category
+                             topic: undefined
+                         }));
+                    }}
+                    activeSubcategory={filters.subcategory}
+                    onSubcategoryClick={(subcategory) => {
+                        if (fixedFilters.subcategory && fixedFilters.subcategory !== subcategory) return;
+                        setFilters(prev => ({
+                            ...prev,
+                            subcategory: prev.subcategory === subcategory ? undefined : subcategory,
+                            topic: undefined // Clear topic when changing subcategory
+                        }));
+                    }}
+                    activeTopic={filters.topic}
+                    onTopicClick={(topic) => {
+                        if (fixedFilters.topic && fixedFilters.topic !== topic) return;
+                        setFilters(prev => ({
+                            ...prev,
+                            topic: prev.topic === topic ? undefined : topic
                         }));
                     }}
                 />
