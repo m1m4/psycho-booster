@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getPaginatedQuestions } from '@/lib/firebase/db';
+import { getPaginatedQuestions, getQuestionSet } from '@/lib/firebase/db';
 import { QuestionSet } from '@/types/submit';
 import { ExamFilters } from './SelectionScreen';
 import { QuestionCard } from './QuestionCard';
 import { SummaryScreen } from './SummaryScreen';
+import { QuestionSetEditor } from '../submit/QuestionSetEditor';
 
 interface ExamManagerProps {
     filters: ExamFilters;
@@ -18,6 +19,11 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, number>>({}); // qId -> answerIndex
     const [isFinished, setIsFinished] = useState(false);
+    
+    // Editor State
+    const [editingData, setEditingData] = useState<Partial<QuestionSet> | null>(null);
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [loadingEditor, setLoadingEditor] = useState(false);
 
     // Fetch questions on mount
     useEffect(() => {
@@ -63,6 +69,7 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
                     // Synthesize a unique ID if missing or duplicate
                     id: q.id || `${set.id}_${idx}`, 
                     _parentId: set.id,
+                    _originalIndex: idx,
                     // Inject generic difficulty if missing on question but present on set
                     difficulty: q.difficulty || set.difficulty
                 })));
@@ -93,21 +100,27 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
                     return true;
                 });
 
-                let flatQuestions = validSets.flatMap(set => set.questions.map((q, idx) => ({
+                // Shuffle Sets (Preserve internal order of questions within a set)
+                const shuffledSets = validSets.sort(() => Math.random() - 0.5);
+
+                const flatQuestions = shuffledSets.flatMap(set => set.questions.map((q, idx) => ({
                      ...q,
                      id: q.id || `${set.id}_${idx}`,
+                     _parentId: set.id,
+                     _originalIndex: idx,
+                     // Inject Shared Assets
+                     assetText: set.assetText,
+                     assetImageUrl: set.assetImageUrl,
                      difficulty: q.difficulty || set.difficulty // Fallback
                 })));
 
-                // Shuffle (Randomize order)
-                flatQuestions = flatQuestions.sort(() => Math.random() - 0.5);
-
                 // Apply Limit
+                let finalQuestions = flatQuestions;
                 if (filters.limit !== 'all') {
-                    flatQuestions = flatQuestions.slice(0, filters.limit);
+                    finalQuestions = flatQuestions.slice(0, filters.limit);
                 }
 
-                setQuestions(flatQuestions);
+                setQuestions(finalQuestions);
             } catch (err) {
                 console.error("Failed to fetch questions", err);
             } finally {
@@ -143,6 +156,65 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
         if (currentIndex > 0) {
             setCurrentIndex(prev => prev - 1);
         }
+    };
+
+    const handleEditClick = async () => {
+        const currentQ = questions[currentIndex];
+        if (!currentQ._parentId) return;
+
+        setLoadingEditor(true);
+        try {
+            const data = await getQuestionSet(currentQ._parentId);
+            if (data) {
+                setEditingData(data);
+                setIsEditorOpen(true);
+            }
+        } catch (error) {
+            console.error("Failed to fetch question set for editing", error);
+            alert("שגיאה בטעינת השאלה לעריכה");
+        } finally {
+            setLoadingEditor(false);
+        }
+    };
+
+    const handleEditSuccess = async (updatedId: string) => {
+        // Fetch updated data to refresh the view
+        try {
+            const updatedSet = await getQuestionSet(updatedId);
+            if (updatedSet) {
+                 setQuestions(prevQuestions => {
+                    return prevQuestions.map(q => {
+                        if (q._parentId === updatedId) {
+                            // Match by original index in the set
+                            // This assumes the user didn't reorder or delete questions in the editor (which might shift indices).
+                            // But usually users just edit text. If they deleted, we might index out of bounds.
+                            
+                            const idx = q._originalIndex;
+                            if (idx !== undefined && idx >= 0 && idx < updatedSet.questions.length) {
+                                const newQ = updatedSet.questions[idx];
+                                return {
+                                    ...newQ,
+                                    id: q.id, // Keep execution ID (or we could update it, but keeping it ensures state consistency for `answers`)
+                                               // Actually, if we keep old ID, next answer logic might be fine, but if ID was synthesised?
+                                               // If the user answers, we track by ID. If we update content, ID can stay same for UI consistency.
+                                    _parentId: updatedId,
+                                    _originalIndex: idx, 
+                                    difficulty: newQ.difficulty || updatedSet.difficulty
+                                };
+                            }
+                        }
+                        return q;
+                    });
+                 });
+                 
+                 // Also update current editing data if we were to keep modal open, but we close it.
+            }
+        } catch (error) {
+            console.error("Failed to refresh question after edit", error);
+        }
+        
+        setIsEditorOpen(false);
+        setEditingData(null);
     };
 
     if (loading) {
@@ -210,8 +282,23 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
                     <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">שאלה</span>
                     <span className="text-lg font-black text-gray-900">{currentIndex + 1} <span className="text-gray-400 text-sm font-medium">/ {questions.length}</span></span>
                 </div>
-                <div className="w-20 hidden sm:block">
-                    {/* Placeholder for symmetry */}
+                <div className="w-20 hidden sm:flex justify-end">
+                    <button
+                        onClick={handleEditClick}
+                        disabled={loadingEditor}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-bold px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1 disabled:opacity-50"
+                    >
+                        {loadingEditor ? (
+                            <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
+                        ) : (
+                            <>
+                                <span>עריכה</span>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
 
@@ -231,6 +318,8 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
                 onSelectAnswer={handleAnswer}
                 showExplanation={isAnswered}
                 isEnglish={filters.categories.includes('english')} 
+                assetText={currentQ.assetText}
+                assetImageUrl={currentQ.assetImageUrl}
             />
 
             {/* Navigation */}
@@ -256,6 +345,34 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
                     </button>
                 )}
             </div>
+
+            {/* Edit Modal */}
+            {isEditorOpen && editingData && (
+                <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+                        <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white z-10">
+                            <h2 className="text-xl font-bold text-gray-900">עריכת שאלה</h2>
+                            <button 
+                                onClick={() => {
+                                    setIsEditorOpen(false);
+                                    setEditingData(null);
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            >
+                                <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <QuestionSetEditor 
+                                initialData={editingData}
+                                onSuccess={handleEditSuccess}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

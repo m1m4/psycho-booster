@@ -13,6 +13,9 @@ interface QuestionCardProps {
     onSelectAnswer: (index: number) => void;
     showExplanation: boolean;
     isEnglish: boolean;
+    // Shared Assets
+    assetText?: string;
+    assetImageUrl?: string | null;
 }
 
 export function QuestionCard({ 
@@ -20,7 +23,9 @@ export function QuestionCard({
     selectedAnswer, 
     onSelectAnswer, 
     showExplanation, 
-    isEnglish 
+    isEnglish,
+    assetText,
+    assetImageUrl
 }: QuestionCardProps) {
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
@@ -69,6 +74,35 @@ export function QuestionCard({
     return (
         <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500" dir={isEnglish && !hasHebrew(question.questionText) ? 'ltr' : 'rtl'}>
             
+            {/* Shared Asset Section */}
+            {(assetText || assetImageUrl) && (
+                <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 bg-blue-100 text-blue-600 px-3 py-1 text-xs font-bold rounded-bl-lg">
+                        קטע משותף / תרשים
+                    </div>
+                    
+                    {assetImageUrl && (
+                        <div className="mb-6 flex justify-center">
+                            <PreviewImage
+                                src={assetImageUrl}
+                                alt="Shared Asset"
+                                className="max-h-96 h-auto w-auto object-contain rounded-lg border border-gray-200"
+                                useCors
+                            />
+                        </div>
+                    )}
+                    
+                    {assetText && (
+                        <div 
+                            className={`text-gray-800 whitespace-pre-wrap leading-relaxed ${isEnglish && !hasHebrew(assetText) ? 'text-left' : 'text-right'}`}
+                            dir={isEnglish && !hasHebrew(assetText) ? 'ltr' : 'rtl'}
+                        >
+                            <PreviewRender content={assetText} minimal isEnglish={isEnglish} />
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Question Section */}
             <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100">
                 <div 
