@@ -22,6 +22,26 @@ import { db } from "./config";
 import { QuestionSet, QuestionFilters } from "@/types/submit";
 
 /**
+ * Recursively removes keys with undefined values from an object.
+ * Firestore does not support undefined values.
+ */
+export function sanitizeForFirestore(obj: any): any {
+    if (obj === null || obj === undefined) return null;
+    if (Array.isArray(obj)) return obj.map(sanitizeForFirestore);
+    if (typeof obj === 'object') {
+        const newObj: any = {};
+        for (const key in obj) {
+            const value = obj[key];
+            if (value !== undefined) {
+                newObj[key] = sanitizeForFirestore(value);
+            }
+        }
+        return newObj;
+    }
+    return obj;
+}
+
+/**
  * Fetches a single question set from Firestore.
  * 
  * @param id The ID of the document to fetch.
@@ -67,11 +87,12 @@ export async function saveQuestionSet(data: Omit<QuestionSet, 'id' | 'createdAt'
             }
 
             // Create the question document
-            transaction.set(newDocRef, {
+            const cleanData = sanitizeForFirestore({
                 ...data,
                 id: newDocRef.id,
                 createdAt: serverTimestamp(),
             });
+            transaction.set(newDocRef, cleanData);
 
             // Update stats atomically using increment
             const subcategoryKey = `bySubcategory.${data.subcategory}`;
@@ -181,10 +202,12 @@ export async function updateQuestionSet(id: string, data: Partial<QuestionSet>):
             }
 
             // 3. Perform Updates
-            transaction.update(docRef, {
+            const cleanData = sanitizeForFirestore({
                 ...data,
                 updatedAt: serverTimestamp()
             });
+
+            transaction.update(docRef, cleanData);
 
             if (statsChanged) {
                 transaction.update(statsRef, statsUpdates);
