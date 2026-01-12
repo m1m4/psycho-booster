@@ -188,7 +188,8 @@ export function QuestionsTable({
         if (!date) return 'Unknown';
         if (date.toDate) return date.toDate().toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' });
         if (date instanceof Date) return date.toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' });
-        return date;
+        // Fallback for corrupted data (e.g. plain object instead of Timestamp)
+        return 'Invalid Date';
     };
 
     const getSubcategoryLabel = (sub: string) => {

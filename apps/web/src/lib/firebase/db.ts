@@ -87,12 +87,13 @@ export async function saveQuestionSet(data: Omit<QuestionSet, 'id' | 'createdAt'
             }
 
             // Create the question document
-            const cleanData = sanitizeForFirestore({
-                ...data,
+            const cleanData = sanitizeForFirestore(data); // Sanitize ONLY user data
+            
+            transaction.set(newDocRef, {
+                ...cleanData,
                 id: newDocRef.id,
                 createdAt: serverTimestamp(),
             });
-            transaction.set(newDocRef, cleanData);
 
             // Update stats atomically using increment
             const subcategoryKey = `bySubcategory.${data.subcategory}`;
@@ -202,12 +203,12 @@ export async function updateQuestionSet(id: string, data: Partial<QuestionSet>):
             }
 
             // 3. Perform Updates
-            const cleanData = sanitizeForFirestore({
-                ...data,
+            const cleanData = sanitizeForFirestore(data); // Sanitize ONLY user data
+
+            transaction.update(docRef, {
+                ...cleanData,
                 updatedAt: serverTimestamp()
             });
-
-            transaction.update(docRef, cleanData);
 
             if (statsChanged) {
                 transaction.update(statsRef, statsUpdates);
