@@ -282,17 +282,18 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
                     <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">שאלה</span>
                     <span className="text-lg font-black text-gray-900">{currentIndex + 1} <span className="text-gray-400 text-sm font-medium">/ {questions.length}</span></span>
                 </div>
-                <div className="w-20 hidden sm:flex justify-end">
+                <div className="w-20 flex justify-end">
                     <button
                         onClick={handleEditClick}
                         disabled={loadingEditor}
                         className="text-sm text-blue-600 hover:text-blue-800 font-bold px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1 disabled:opacity-50"
+                        title="עריכה"
                     >
                         {loadingEditor ? (
                             <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
                         ) : (
                             <>
-                                <span>עריכה</span>
+                                <span className="hidden sm:inline">עריכה</span>
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
@@ -348,10 +349,10 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
 
             {/* Edit Modal */}
             {isEditorOpen && editingData && (
-                <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-                    <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
-                        <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white z-10">
-                            <h2 className="text-xl font-bold text-gray-900">עריכת שאלה</h2>
+                <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 overflow-hidden">
+                    <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-h-[90vh] sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-w-5xl overflow-hidden transition-all duration-300 transform translate-y-0">
+                        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-100 bg-white z-10">
+                            <h2 className="text-lg sm:text-xl font-bold text-gray-900">עריכת שאלה</h2>
                             <button 
                                 onClick={() => {
                                     setIsEditorOpen(false);
@@ -364,7 +365,7 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
                                 </svg>
                             </button>
                         </div>
-                        <div className="p-6">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                             <QuestionSetEditor 
                                 initialData={editingData}
                                 onSuccess={handleEditSuccess}
