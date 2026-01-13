@@ -45,24 +45,7 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
                 
                 if (filters.difficulties.length === 1) dbFilters.difficulty = filters.difficulties[0];
                 
-                // ... (lines 46-62 omitted for brevity in replacement, but wait, I need to keep the fetch call)
 
-                const { questions: sets } = await getPaginatedQuestions(
-                    200, 
-                    null,
-                    'createdAt',
-                    'desc',
-                    dbFilters
-                );
-                
-                if (!isMounted) return;
-
-                // Flatten sets to questions (same as before)
-                // ... (lines 67-75 omitted, can I skip strictly? I need to replace the dbFilters block and the client filter block)
-                // I will use replace for the dbFilters block first.
-
-                // Actually I will do two replaces to be safe.
-                // First: remove dbFilters.topic assignment.
 
                 
                 // Note: If multiple categories/difficulties are selected, but DB function only supports single value or specific 'in' logic, 
