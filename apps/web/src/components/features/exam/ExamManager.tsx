@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { getPaginatedQuestions, getQuestionSet } from '@/lib/firebase/db';
-import { QuestionSet } from '@/types/submit';
+import { QuestionSet, TOPIC_OPTIONS } from '@/types/submit';
 import { ExamFilters } from './SelectionScreen';
 import { QuestionCard } from './QuestionCard';
 import { SummaryScreen } from './SummaryScreen';
@@ -40,8 +40,30 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
 
                 if (filters.categories.length === 1) dbFilters.category = filters.categories[0];
                 if (filters.subcategories.length > 0) dbFilters.subcategory = filters.subcategories;
-                if (filters.topics.length > 0) dbFilters.topic = filters.topics;
+                // Remove strict topic filtering from DB to allow mixed selections (Union logic)
+                // if (filters.topics.length > 0) dbFilters.topic = filters.topics; 
+                
                 if (filters.difficulties.length === 1) dbFilters.difficulty = filters.difficulties[0];
+                
+                // ... (lines 46-62 omitted for brevity in replacement, but wait, I need to keep the fetch call)
+
+                const { questions: sets } = await getPaginatedQuestions(
+                    200, 
+                    null,
+                    'createdAt',
+                    'desc',
+                    dbFilters
+                );
+                
+                if (!isMounted) return;
+
+                // Flatten sets to questions (same as before)
+                // ... (lines 67-75 omitted, can I skip strictly? I need to replace the dbFilters block and the client filter block)
+                // I will use replace for the dbFilters block first.
+
+                // Actually I will do two replaces to be safe.
+                // First: remove dbFilters.topic assignment.
+
                 
                 // Note: If multiple categories/difficulties are selected, but DB function only supports single value or specific 'in' logic, 
                 // we might need to do client side filtering or multiple queries. 
@@ -97,6 +119,20 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
                     if (filters.categories.length > 0 && !filters.categories.includes(set.category)) return false;
                     // Filter Difficulty
                     if (filters.difficulties.length > 0 && !filters.difficulties.includes(set.difficulty)) return false;
+                    
+                    // Smart Topic Filtering
+                    // If the user selected ANY topics relevant to this set's subcategory, strict filtering applies.
+                    // If the user selected NO topics for this subcategory (but maybe for others), we show all questions in this subcategory.
+                    const subcategoryTopics = TOPIC_OPTIONS[set.subcategory]?.map(t => t.value) || [];
+                    const userSelectedTopicsForThisSub = filters.topics.filter(t => subcategoryTopics.includes(t));
+                    
+                    if (userSelectedTopicsForThisSub.length > 0) {
+                        // User wants specific topics for this subcategory
+                        if (!set.topic || !userSelectedTopicsForThisSub.includes(set.topic)) {
+                            return false;
+                        }
+                    }
+
                     return true;
                 });
 
