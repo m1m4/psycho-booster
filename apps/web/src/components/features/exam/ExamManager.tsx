@@ -25,6 +25,34 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [loadingEditor, setLoadingEditor] = useState(false);
 
+    // Timer State
+    const [timeLeft, setTimeLeft] = useState<number>(
+        filters.timeLimit === 'unlimited' ? 0 : (filters.timeLimit as number) * 60
+    );
+
+    // Timer Effect
+    useEffect(() => {
+        if (filters.timeLimit === 'unlimited' || isFinished || loading) return;
+
+        if (timeLeft <= 0) {
+            setIsFinished(true);
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    setIsFinished(true); // Auto submit
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [filters.timeLimit, isFinished, loading, timeLeft]);
+
     // Fetch questions on mount
     useEffect(() => {
         let isMounted = true;
@@ -297,9 +325,18 @@ export function ExamManager({ filters, onExit }: ExamManagerProps) {
                 >
                     יציאה
                 </button>
-                <div className="flex flex-col items-center">
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">שאלה</span>
-                    <span className="text-lg font-black text-gray-900">{currentIndex + 1} <span className="text-gray-400 text-sm font-medium">/ {questions.length}</span></span>
+                <div className="flex flex-col items-center justify-center min-w-[100px]">
+                    {filters.timeLimit !== 'unlimited' && (
+                        <div className={`text-xl font-bold font-mono leading-none mb-0.5 ${timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-blue-600'}`}>
+                            {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+                        </div>
+                    )}
+                    <div className="flex items-center gap-1 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        <span>שאלה</span>
+                        <span className="text-gray-900">{currentIndex + 1}</span>
+                        <span>/</span>
+                        <span>{questions.length}</span>
+                    </div>
                 </div>
                 <div className="w-20 flex justify-end">
                     <button

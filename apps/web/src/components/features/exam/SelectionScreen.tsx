@@ -13,6 +13,7 @@ export interface ExamFilters {
     topics: string[];
     difficulties: string[];
     limit: number | 'all';
+    timeLimit: number | 'unlimited';
 }
 
 const CATEGORIES = [
@@ -35,12 +36,20 @@ const LIMIT_OPTIONS = [
     { label: 'הכל', value: 'all' },
 ];
 
+const TIME_OPTIONS = [
+    { label: '5 דק׳', value: 5 },
+    { label: '10 דק׳', value: 10 },
+    { label: '20 דק׳', value: 20 },
+    { label: '30 דק׳', value: 30 },
+];
+
 export function SelectionScreen({ onStart }: SelectionScreenProps) {
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
     const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
     const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([]);
     const [selectedLimit, setSelectedLimit] = useState<number | 'all'>(10);
+    const [selectedTimeLimit, setSelectedTimeLimit] = useState<number | 'unlimited'>('unlimited');
 
     const toggle = (list: string[], value: string, setList: (l: string[]) => void) => {
         if (list.includes(value)) {
@@ -73,6 +82,7 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
             topics: selectedTopics,
             difficulties: selectedDifficulties,
             limit: selectedLimit,
+            timeLimit: selectedTimeLimit,
         });
     };
 
@@ -231,6 +241,43 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
                                     {opt.label}
                                 </button>
                             ))}
+                        </div>
+                    </section>
+
+                    {/* Time Limit */}
+                    <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 h-fit">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                             <span className="w-1 h-6 bg-orange-500 rounded-full"></span>
+                             זמן בוחן
+                        </h3>
+                        <div className="flex flex-col gap-2">
+                             <div className="flex flex-wrap gap-2">
+                                {TIME_OPTIONS.map(opt => (
+                                    <button
+                                        key={String(opt.value)}
+                                        onClick={() => setSelectedTimeLimit(opt.value as number | 'unlimited')}
+                                        className={`
+                                            flex-1 min-w-[70px] py-2 rounded-lg text-sm font-bold border transition-all
+                                            ${selectedTimeLimit === opt.value
+                                            ? 'bg-orange-500 text-white border-orange-500 shadow-md'
+                                            : 'bg-white text-gray-500 border-gray-200 hover:border-orange-300'}
+                                        `}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setSelectedTimeLimit('unlimited')}
+                                className={`
+                                    w-full py-2 rounded-lg text-sm font-bold border transition-all
+                                    ${selectedTimeLimit === 'unlimited'
+                                    ? 'bg-orange-500 text-white border-orange-500 shadow-md'
+                                    : 'bg-white text-gray-500 border-gray-200 hover:border-orange-300'}
+                                `}
+                            >
+                                ללא הגבלה
+                            </button>
                         </div>
                     </section>
 
