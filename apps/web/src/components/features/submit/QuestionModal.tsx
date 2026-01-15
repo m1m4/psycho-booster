@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
-import { QuestionPreview } from './QuestionPreview';
+import React, { useEffect, useState } from 'react';
 import { QuestionItem, SavedQuestionItem } from '@/types/submit';
 import { useRouter } from 'next/navigation';
+import { QuestionCard } from '@/components/features/exam/QuestionCard';
 
 interface QuestionModalProps {
     isOpen: boolean;
@@ -25,6 +25,10 @@ interface QuestionModalProps {
 
 export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish, isSubmitting = false, readOnly = false }: QuestionModalProps) {
     const router = useRouter();
+    const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+    // Track user selection per question index
+    const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | null>>({});
+
     const isAssetRequiredSubcategory =
         formData.subcategory === 'chart_inference' ||
         formData.subcategory === 'reading_comprehension_verbal' ||
@@ -36,15 +40,33 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            // Reset state on open
+            setActiveQuestionIndex(0);
+            setSelectedAnswers({});
         } else {
             document.body.style.overflow = 'unset';
         }
         return () => {
             document.body.style.overflow = 'unset';
+            setSelectedAnswers({});
+            setActiveQuestionIndex(0);
         };
     }, [isOpen]);
 
     if (!isOpen) return null;
+
+    const currentQuestion = formData.questions[activeQuestionIndex];
+    if (!currentQuestion) return null;
+
+    // Helper to get asset image URL
+    const assetImageUrl = formData.assetImageUrl || (formData.assetFile ? URL.createObjectURL(formData.assetFile) : null);
+
+    const handleAnswerSelect = (answerIndex: number) => {
+        setSelectedAnswers(prev => ({
+            ...prev,
+            [activeQuestionIndex]: answerIndex
+        }));
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6" dir={isEnglish ? 'ltr' : 'rtl'}>
@@ -57,9 +79,9 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
 
             {/* Modal Content */}
             <div className={`
-                relative w-full md:w-fit md:min-w-[min(90vw,480px)] max-w-6xl 
+                relative w-full md:w-fit md:min-w-[min(90vw,800px)] max-w-6xl 
                 h-full md:h-auto md:max-h-[92vh] mx-auto
-                ${isQuestionSet ? 'md:min-h-[750px]' : 'md:min-h-[500px]'}
+                ${isQuestionSet ? 'md:min-h-[750px]' : 'md:min-h-[600px]'}
                 bg-white md:rounded-3xl shadow-2xl flex flex-col overflow-hidden 
                 border-x-0 border-y-0 md:border md:border-gray-200 
                 overscroll-behavior-contain
@@ -69,10 +91,10 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50/50">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">
-                            {readOnly ? (isEnglish ? 'Question Details' : 'פרטי שאלה') : (isEnglish ? 'Preview Question' : 'תצוגה מקדימה')}
+                            {readOnly ? (isEnglish ? 'Question Details' : 'פרטי שאלה') : (isEnglish ? 'Interactive Preview' : 'תצוגה מקדימה אינטראקטיבית')}
                         </h2>
                         <p className="text-sm text-gray-500 mt-1">
-                            {isEnglish ? 'Please review the details before submitting' : 'אנא וודא שכל הפרטים נכונים לפני השליחה'}
+                            {isEnglish ? 'Test your question logic before submitting' : 'בדוק את השאלה כפי שתופיע במבחן'}
                         </p>
                     </div>
                     <button
@@ -85,13 +107,41 @@ export function QuestionModal({ isOpen, onClose, onConfirm, formData, isEnglish,
                     </button>
                 </div>
 
+                {/* Tab Navigation for Question Sets */}
+                {formData.questions.length > 1 && (
+                    <div className="flex gap-2 border-b border-gray-200 overflow-x-auto px-6 pt-4 bg-gray-50/30" dir={isEnglish ? 'ltr' : 'rtl'}>
+                        {formData.questions.map((_, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => setActiveQuestionIndex(idx)}
+                                className={`
+                                    px-6 py-2 text-sm font-bold rounded-t-xl transition-all whitespace-nowrap
+                                    ${activeQuestionIndex === idx
+                                        ? 'bg-white text-blue-600 border-x border-t border-gray-200 shadow-[0_-2px_5px_rgba(0,0,0,0.02)] translate-y-[1px]'
+                                        : 'bg-gray-100/50 text-gray-500 hover:bg-gray-100 hover:text-gray-700'}
+                                `}
+                            >
+                                {isEnglish ? `Q ${idx + 1}` : `שאלה ${idx + 1}`}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {/* Scrollable Body */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-                    <QuestionPreview formData={formData} isEnglish={isEnglish} />
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-gray-50/30">
+                    <QuestionCard
+                        question={currentQuestion as any}
+                        selectedAnswer={selectedAnswers[activeQuestionIndex] ?? null}
+                        onSelectAnswer={handleAnswerSelect}
+                        showExplanation={false} // Card handles showing explanation on selection
+                        isEnglish={isEnglish}
+                        assetText={formData.assetText}
+                        assetImageUrl={assetImageUrl}
+                    />
                 </div>
 
                 {/* Footer Actions */}
-                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex flex-col sm:flex-row gap-3 justify-between items-center">
+                <div className="px-6 py-4 border-t border-gray-200 bg-white flex flex-col sm:flex-row gap-3 justify-between items-center z-10">
                     {!readOnly ? (
                         <button
                             onClick={onConfirm}

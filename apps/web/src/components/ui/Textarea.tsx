@@ -26,59 +26,44 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         const textareaRef = useRef<HTMLTextAreaElement | null>(null);
         const highlightRef = useRef<HTMLDivElement | null>(null);
 
-        /**
-         * Adjusts the height of the textarea and its highlight layer based on its content.
-         */
-        const adjustHeight = () => {
-            if (singleLine) return;
-            const element = textareaRef.current;
-            if (element) {
-                // Reset height to auto to correctly shrink/grow
-                element.style.height = 'auto';
-                const parsedMinHeight = parseInt(String(minHeight)) || 0;
-                const newHeight = `${Math.max(element.scrollHeight, parsedMinHeight)}px`;
-                element.style.height = newHeight;
-                if (highlightRef.current) {
-                    highlightRef.current.style.height = newHeight;
-                }
-            }
-        };
-
-        useEffect(() => {
-            adjustHeight();
-            // Double check after a small delay to handle layout shifts
-            const timer = setTimeout(adjustHeight, 10);
-            return () => clearTimeout(timer);
-        }, [value]);
-
+        // Remove JS-based auto-resize for multiline to prevent scroll jumping.
+        // Instead, we rely on the "Ghost Element" pattern where the highlight div drives the height naturally.
+        
         /**
          * Escapes HTML and wraps markdown-style bold markers in <strong> tags for visual highlighting.
-         * 
-         * @param text The raw input text
-         * @returns Sanitized HTML string with bold highlighting
          */
         const getHighlightedContent = (text: string) => {
             if (!text) return '';
-            return text
+            // Ensure trailing newlines generate a line in the ghost element
+            const hasTrailingNewline = text.endsWith('\n');
+            
+            let content = text
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
-                // Removed automatic bold highlighting for **text**
                 .replace(/(\$\$?)([^\$]+?)(\$\$?)/g, (match, d1, content, d2) => {
-                    // Wrap LaTeX math in a span without forcing flow/display changes to keep cursor aligned
                     return `<span>${d1}${content}${d2}</span>`;
                 })
                 .replace(/\n/g, '<br/>');
+            
+            if (hasTrailingNewline) {
+                content += '<br/>';
+            }
+            
+            return content;
         };
 
         useEffect(() => {
             if (highlightRef.current && typeof value === 'string') {
-                highlightRef.current.innerHTML = getHighlightedContent(value) + (value.endsWith('\n') ? '<br/>' : '');
+                // For the ghost element pattern, we need a zero-width space if empty to maintain one line height
+                const html = value ? getHighlightedContent(value) : (singleLine ? '' : '<br/>');
+                highlightRef.current.innerHTML = html;
             }
-        }, [value]);
+        }, [value, singleLine]);
 
         /**
-         * Synchronizes scroll position between the textarea and the highlight layer.
+         * Synchronizes scroll position for single-line inputs (horizontal scroll).
+         * For multiline, we don't scroll inside the box (it grows), so this is less critical but kept for safety.
          */
         const handleScroll = () => {
             if (textareaRef.current && highlightRef.current) {
@@ -87,12 +72,6 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             }
         };
 
-        /**
-         * Infers text direction (LTR/RTL) based on the first character.
-         * 
-         * @param val The value to check
-         * @returns 'ltr' or 'rtl'
-         */
         const getDirection = (val: any) => {
             if (!val) return 'rtl';
             const firstChar = String(val).trim().charAt(0);
@@ -109,7 +88,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             padding: (singleLine || noWrap) ? '4px 12px' : '8px 16px',
             margin: '0',
             border: 'none',
-            whiteSpace: (singleLine || noWrap) ? 'pre' : 'pre-wrap', // Important for horizontal scroll
+            whiteSpace: (singleLine || noWrap) ? 'pre' : 'pre-wrap',
             overflowWrap: (singleLine || noWrap) ? 'normal' : 'break-word',
             boxSizing: 'border-box',
             WebkitFontSmoothing: 'antialiased',
@@ -123,6 +102,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             unicodeBidi: 'plaintext',
         };
 
+        // Render strategy:
+        // Single Line: Standard relative input, absolute highlight behind.
+        // Multi Line (Auto Grow): Relative highlight (ghost) drives height, Absolute input overlays it.
+        const isMultiLine = !singleLine && !noWrap;
+
         return (
             <div className="w-full space-y-2" style={{ boxSizing: 'border-box' }}>
                 {label && (
@@ -134,15 +118,24 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                     relative rounded-lg border overflow-hidden bg-white transition-all duration-200
                     ${error ? 'border-red-500 focus-within:ring-2 focus-within:ring-red-500' : 'border-gray-200 focus-within:ring-2 focus-within:ring-[#4169E1]'}
                 `}>
+                    
+                    {/* Ghost / Highlight Element */}
                     <div
                         ref={highlightRef}
-                        className="absolute inset-0 pointer-events-none text-black"
+                        className={`
+                            ${isMultiLine ? 'relative' : 'absolute inset-0'} 
+                            pointer-events-none text-black
+                        `}
                         style={{
                             ...sharedStyles,
+                            height: isMultiLine ? 'auto' : '100%',
+                            minHeight: isMultiLine ? minHeight : undefined,
+                            // Ensure the ghost is not visible to screen readers (it's just for layout/visuals)
+                            visibility: 'visible', // Must be visible to take up space (opacity is handled by text overlaying logic if needed, but here text is transparent on input)
                         }}
-                        dangerouslySetInnerHTML={{ __html: getHighlightedContent(String(value || '')) }}
                     />
 
+                    {/* Input Element */}
                     <textarea
                         ref={(element) => {
                             textareaRef.current = element;
@@ -160,35 +153,26 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                         onScroll={handleScroll}
                         rows={singleLine ? 1 : (noWrap ? 1 : (props.rows || 1))}
                         className={`
-                            relative w-full bg-transparent caret-black
+                            ${isMultiLine ? 'absolute inset-0 h-full' : 'relative'}
+                            w-full bg-transparent caret-black
                             placeholder:text-gray-500
-                            focus:outline-none resize-none ${singleLine ? 'overflow-x-auto overflow-y-hidden' : 'overflow-hidden'}
+                            focus:outline-none 
+                            ${singleLine ? 'resize-none overflow-x-auto overflow-y-hidden' : 'resize-none overflow-hidden'}
                             ${className}
                         `}
                         style={{
                             ...sharedStyles,
-                            height: singleLine ? minHeight : 'auto', // Allow it to collapse to check scrollHeight 
-                            minHeight: minHeight,
+                            minHeight: isMultiLine ? undefined : minHeight,
                             color: 'transparent',
                             WebkitTextFillColor: 'transparent',
                             WebkitTapHighlightColor: 'transparent',
-                            whiteSpace: (singleLine || noWrap) ? 'pre' : 'pre-wrap',
                             overflowX: (singleLine || noWrap) ? 'auto' : 'hidden',
                             overflowY: 'hidden',
                         }}
                         {...props}
-                        onInput={(e) => {
-                            adjustHeight();
-                            if (props.onInput) props.onInput(e);
-                        }}
                     />
                 </div>
                 {error && <p className="text-sm text-red-500">{error}</p>}
-
-                <style dangerouslySetInnerHTML={{
-                    __html: `
-                    /* Removed strong styles as bold highlighting is disabled */
-                ` }} />
             </div>
         );
     }
