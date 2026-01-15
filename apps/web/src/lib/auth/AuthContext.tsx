@@ -19,6 +19,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     isAuthorized: boolean;
+    role: 'admin' | 'tester' | null;
     signInWithGoogle: () => Promise<void>;
     logout: () => Promise<void>;
 }
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const [role, setRole] = useState<'admin' | 'tester' | null>(null);
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
@@ -62,32 +64,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log("AuthProvider: Auth state changed:", currentUser?.email);
 
             if (currentUser && currentUser.email) {
-                // Determine Authorization
+                // Determine Authorization and Role
+                let currentRole: 'admin' | 'tester' | null = null;
                 let authorized = false;
 
                 // Dev Bypass
                 if (process.env.NODE_ENV === "development" &&
                     currentUser.email === process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN_EMAIL) {
+                    currentRole = 'admin';
                     authorized = true;
                 } else {
                     try {
                         const adminDoc = await getDoc(doc(db, "admin_users", currentUser.email));
-                        authorized = adminDoc.exists();
+                        if (adminDoc.exists()) {
+                            authorized = true;
+                            const data = adminDoc.data();
+                            currentRole = data.role || 'admin'; // Default to admin for existing users
+                        }
                     } catch (e) {
-                        console.error("AuthProvider: Admin check error", e);
-                        // If network fails, we might still want to let them be 'logged in' but maybe not authorized?
-                        // For now, keep as false.
+                        console.error("AuthProvider: Role check error", e);
                     }
                 }
 
                 if (mountedRef.current) {
                     setUser(currentUser);
                     setIsAuthorized(authorized);
+                    setRole(currentRole);
                 }
             } else {
                 if (mountedRef.current) {
                     setUser(null);
                     setIsAuthorized(false);
+                    setRole(null);
                 }
             }
 
@@ -128,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await signOut(auth);
             setUser(null);
             setIsAuthorized(false);
+            setRole(null);
             router.push("/login");
         } catch (error) {
             console.error("Error signing out", error);
@@ -135,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, isAuthorized, signInWithGoogle, logout }}>
+        <AuthContext.Provider value={{ user, loading, isAuthorized, role, signInWithGoogle, logout }}>
             {children}
         </AuthContext.Provider>
     );

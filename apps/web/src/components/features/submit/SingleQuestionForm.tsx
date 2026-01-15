@@ -38,11 +38,6 @@ export function SingleQuestionForm({
 }: SingleQuestionFormProps) {
     if (!question) return null;
 
-    const scrollOnFocus = (e: React.FocusEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-        // Scroll the element into view with a bit of padding at the top
-        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    };
-
     return (
         <div
             id="question-form-container"
@@ -81,7 +76,6 @@ export function SingleQuestionForm({
                 id={`q${activeQuestionIndex}-text`}
                 value={question.questionText}
                 onChange={(e) => handleQuestionChange('questionText', e.target.value)}
-                onFocus={scrollOnFocus}
                 placeholder={isEnglish ? 'Type question here...' : 'הקלד את השאלה כאן...'}
                 dir={isEnglish ? 'ltr' : undefined}
                 disabled={!isSubCategorySelected}
@@ -169,7 +163,6 @@ export function SingleQuestionForm({
                 showLatex={showLatex}
                 errors={formErrors}
                 labels={labels}
-                onFocus={scrollOnFocus}
             />
 
             <div dir={isEnglish ? 'ltr' : 'rtl'}>
@@ -178,7 +171,6 @@ export function SingleQuestionForm({
                     label={labels.explanation}
                     value={question.explanation}
                     onChange={(e) => handleQuestionChange('explanation', e.target.value)}
-                    onFocus={scrollOnFocus}
                     placeholder={isEnglish ? 'Explain why the correct answer is correct...' : 'הסבר מדוע התשובה הנכונה היא נכונה...'}
                     dir={isEnglish ? 'ltr' : 'rtl'}
                     disabled={!isSubCategorySelected}
