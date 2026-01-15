@@ -29,7 +29,8 @@ export function StatisticsPanel({
     activeTopic
 }: StatisticsPanelProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showSubcategories, setShowSubcategories] = useState(false);
+    const [showSubcategories, setShowSubcategories] = useState(false);
+    const [expandedSubcategories, setExpandedSubcategories] = useState<Set<string>>(new Set());
     const queryClient = useQueryClient();
 
     const { data: stats, isLoading, isError } = useQuery({
@@ -48,8 +49,21 @@ export function StatisticsPanel({
     useEffect(() => {
         if (selectedCategory) {
             setShowSubcategories(false);
+            setExpandedSubcategories(new Set()); // Reset on category change
         }
     }, [selectedCategory]);
+
+    const toggleSubcategory = (subValue: string) => {
+        setExpandedSubcategories(prev => {
+            const next = new Set(prev);
+            if (next.has(subValue)) {
+                next.delete(subValue);
+            } else {
+                next.add(subValue);
+            }
+            return next;
+        });
+    };
 
     if (isLoading) return <div className="p-4 bg-white rounded-xl animate-pulse h-32"></div>;
     if (isError || !stats) return null;
@@ -199,32 +213,55 @@ export function StatisticsPanel({
                                         const subTopics = TOPIC_OPTIONS[subOpt.value];
                                         if (!subTopics) return null;
 
+                                        const isExpanded = expandedSubcategories.has(subOpt.value);
+
                                         return (
-                                            <div key={subOpt.value}>
-                                                <h5 className="text-xs font-bold text-gray-400 mb-2">{subOpt.label}</h5>
-                                                <div className="grid grid-cols-1 gap-2 border-r-2 border-gray-100 pr-2">
-                                                    {subTopics.map(opt => {
-                                                        const isActive = Array.isArray(activeTopic)
-                                                            ? activeTopic.includes(opt.value)
-                                                            : activeTopic === opt.value;
-                                                        return (
-                                                            <button 
-                                                                key={opt.value} 
-                                                                onClick={() => {
-                                                                    onTopicClick?.(opt.value);
-                                                                    closeModal();
-                                                                }}
-                                                                className={`flex justify-between p-2 rounded-lg w-full transition-all text-right ${isActive
-                                                                    ? 'bg-blue-100 border border-blue-200'
-                                                                    : 'bg-blue-50/50 hover:bg-blue-50 border border-transparent'
-                                                                }`}
-                                                            >
-                                                                <span className={`text-xs ${isActive ? 'text-blue-800 font-bold' : ''}`}>{opt.label}</span>
-                                                                <span className={`font-bold text-xs ${isActive ? 'text-blue-800' : ''}`}>{byTopic[opt.value] || 0}</span>
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
+                                            <div key={subOpt.value} className="border border-gray-100 rounded-xl overflow-hidden bg-white shadow-sm">
+                                                <button 
+                                                    onClick={() => toggleSubcategory(subOpt.value)}
+                                                    className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors text-right group"
+                                                >
+                                                    <span className="text-sm font-bold text-gray-700">{subOpt.label}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                                                            {bySubcategory[subOpt.value] || 0}
+                                                        </span>
+                                                        <svg 
+                                                            className={`w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} 
+                                                            fill="none" 
+                                                            stroke="currentColor" 
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                        </svg>
+                                                    </div>
+                                                </button>
+                                                
+                                                {isExpanded && (
+                                                    <div className="p-3 grid grid-cols-1 gap-2 bg-white animate-in slide-in-from-top-2 duration-200">
+                                                        {subTopics.map(opt => {
+                                                            const isActive = Array.isArray(activeTopic)
+                                                                ? activeTopic.includes(opt.value)
+                                                                : activeTopic === opt.value;
+                                                            return (
+                                                                <button 
+                                                                    key={opt.value} 
+                                                                    onClick={() => {
+                                                                        onTopicClick?.(opt.value);
+                                                                        closeModal();
+                                                                    }}
+                                                                    className={`flex justify-between p-2.5 rounded-lg w-full transition-all text-right border ${isActive
+                                                                        ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-500/10'
+                                                                        : 'bg-gray-50/50 hover:bg-gray-100 border-transparent'
+                                                                    }`}
+                                                                >
+                                                                    <span className={`text-xs font-medium ${isActive ? 'text-blue-800' : 'text-gray-700'}`}>{opt.label}</span>
+                                                                    <span className={`font-bold text-xs ${isActive ? 'text-blue-800' : 'text-blue-600'}`}>{byTopic[opt.value] || 0}</span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
