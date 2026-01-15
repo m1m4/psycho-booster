@@ -426,17 +426,20 @@ export function QuestionsTable({
                                     { key: 'subcategory', label: 'תת-קטגוריה', width: 'w-[15%]' },
                                     { key: 'topic', label: 'נושא', width: 'w-[15%]' },
                                     { key: 'difficulty', label: 'רמת קושי', width: 'w-[10%]' },
+                                    { key: 'actions', label: '', width: 'w-[5%]' },
                                 ].map((col) => (
                                     <th
                                         key={col.key}
-                                        onClick={() => handleSort(col.key)}
-                                        className={`px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors select-none text-center ${col.width}`}
+                                        onClick={() => col.key !== 'actions' && handleSort(col.key)}
+                                        className={`px-6 py-4 ${col.key !== 'actions' ? 'cursor-pointer hover:bg-gray-100' : ''} transition-colors select-none text-center ${col.width}`}
                                     >
                                         <div className="flex items-center justify-center gap-2">
                                             {col.label}
-                                            <span className="w-4 inline-flex justify-center">
-                                                {getSortIcon(col.key)}
-                                            </span>
+                                            {col.key !== 'actions' && (
+                                                <span className="w-4 inline-flex justify-center">
+                                                    {getSortIcon(col.key)}
+                                                </span>
+                                            )}
                                         </div>
                                     </th>
                                 ))}
@@ -487,6 +490,17 @@ export function QuestionsTable({
                                             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${difficultyColor(q.difficulty || 'medium')}`}>
                                                 {difficultyLabel(q.difficulty || 'medium')}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => window.location.href = `/submit?id=${q.id}`}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                                                title="ערוך שאלה"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
                                         </td>
                                     </tr>
                                 ))

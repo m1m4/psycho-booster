@@ -29,6 +29,7 @@ export function StatisticsPanel({
     activeTopic
 }: StatisticsPanelProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showSubcategories, setShowSubcategories] = useState(false);
     const queryClient = useQueryClient();
 
     const { data: stats, isLoading, isError } = useQuery({
@@ -146,63 +147,83 @@ export function StatisticsPanel({
                                 {activeCategory === selectedCategory ? 'הסר סינון קטגוריה' : `סנן לפי ${CATEGORY_LABELS[selectedCategory]}`}
                             </button>
 
-                            {/* Subcategories */}
+                            {/* Subcategories Collapsible */
+<div>
+  <button
+    onClick={() => setShowSubcategories(prev => !prev)}
+    className="w-full flex items-center justify-between p-3 bg-gray-100 rounded-lg mb-2"
+  >
+    <span className="text-sm font-bold text-gray-600">תתי נושאים</span>
+    <svg className={`w-5 h-5 transition-transform ${showSubcategories ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+  {showSubcategories && (
+    <div className="grid grid-cols-1 gap-2">
+      {(SUBCATEGORY_OPTIONS[selectedCategory as keyof typeof SUBCATEGORY_OPTIONS] || []).map(opt => {
+        const isActive = Array.isArray(activeSubcategory)
+          ? activeSubcategory.includes(opt.value)
+          : activeSubcategory === opt.value;
+        return (
+          <button
+            key={opt.value}
+            onClick={() => {
+              onSubcategoryClick?.(opt.value);
+              closeModal();
+            }}
+            className={`flex justify-between p-3 rounded-xl w-full transition-all text-right ${isActive
+              ? 'bg-blue-50 border border-blue-200 ring-1 ring-blue-500/20'
+              : 'bg-gray-50 hover:bg-gray-100 border border-transparent'}`}
+          >
+            <span className={`text-sm font-medium ${isActive ? 'text-blue-800' : ''}`}>{opt.label}</span>
+            <span className={`font-bold ${isActive ? 'text-blue-600' : 'text-blue-600'}`}>{bySubcategory[opt.value] || 0}</span>
+          </button>
+        );
+      })}
+    </div>
+  )}
+</div>}
+
+
+                            {/* Topics (Iterate over Subcategories to find relevant Topics) */}
                             <div>
-                                <h4 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">תתי נושאים</h4>
-                                <div className="grid grid-cols-1 gap-2">
-                                    {(SUBCATEGORY_OPTIONS[selectedCategory as keyof typeof SUBCATEGORY_OPTIONS] || []).map(opt => {
-                                        const isActive = Array.isArray(activeSubcategory) 
-                                            ? activeSubcategory.includes(opt.value)
-                                            : activeSubcategory === opt.value;
+                                <h4 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">נושאים (Topics)</h4>
+                                <div className="space-y-4">
+                                    {(SUBCATEGORY_OPTIONS[selectedCategory as keyof typeof SUBCATEGORY_OPTIONS] || []).map(subOpt => {
+                                        const subTopics = TOPIC_OPTIONS[subOpt.value];
+                                        if (!subTopics) return null;
+
                                         return (
-                                            <button 
-                                                key={opt.value} 
-                                                onClick={() => {
-                                                    onSubcategoryClick?.(opt.value);
-                                                    closeModal();
-                                                }}
-                                                className={`flex justify-between p-3 rounded-xl w-full transition-all text-right ${isActive
-                                                    ? 'bg-blue-50 border border-blue-200 ring-1 ring-blue-500/20'
-                                                    : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
-                                                }`}
-                                            >
-                                                <span className={`text-sm font-medium ${isActive ? 'text-blue-800' : ''}`}>{opt.label}</span>
-                                                <span className={`font-bold ${isActive ? 'text-blue-600' : 'text-blue-600'}`}>{bySubcategory[opt.value] || 0}</span>
-                                            </button>
+                                            <div key={subOpt.value}>
+                                                <h5 className="text-xs font-bold text-gray-400 mb-2">{subOpt.label}</h5>
+                                                <div className="grid grid-cols-1 gap-2 border-r-2 border-gray-100 pr-2">
+                                                    {subTopics.map(opt => {
+                                                        const isActive = Array.isArray(activeTopic)
+                                                            ? activeTopic.includes(opt.value)
+                                                            : activeTopic === opt.value;
+                                                        return (
+                                                            <button 
+                                                                key={opt.value} 
+                                                                onClick={() => {
+                                                                    onTopicClick?.(opt.value);
+                                                                    closeModal();
+                                                                }}
+                                                                className={`flex justify-between p-2 rounded-lg w-full transition-all text-right ${isActive
+                                                                    ? 'bg-blue-100 border border-blue-200'
+                                                                    : 'bg-blue-50/50 hover:bg-blue-50 border border-transparent'
+                                                                }`}
+                                                            >
+                                                                <span className={`text-xs ${isActive ? 'text-blue-800 font-bold' : ''}`}>{opt.label}</span>
+                                                                <span className={`font-bold text-xs ${isActive ? 'text-blue-800' : ''}`}>{byTopic[opt.value] || 0}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
                                         );
                                     })}
                                 </div>
                             </div>
-
-                            {/* Topics (Quantitative only) */}
-                            {selectedCategory === 'quantitative' && (
-                                <div>
-                                    <h4 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">נושאים (Topics)</h4>
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {(TOPIC_OPTIONS[selectedCategory as keyof typeof TOPIC_OPTIONS] || []).map(opt => {
-                                            const isActive = Array.isArray(activeTopic)
-                                                ? activeTopic.includes(opt.value)
-                                                : activeTopic === opt.value;
-                                            return (
-                                                <button 
-                                                    key={opt.value} 
-                                                    onClick={() => {
-                                                        onTopicClick?.(opt.value);
-                                                        closeModal();
-                                                    }}
-                                                    className={`flex justify-between p-2 rounded-lg w-full transition-all text-right ${isActive
-                                                        ? 'bg-blue-100 border border-blue-200'
-                                                        : 'bg-blue-50/50 hover:bg-blue-50 border border-transparent'
-                                                    }`}
-                                                >
-                                                    <span className={`text-xs ${isActive ? 'text-blue-800 font-bold' : ''}`}>{opt.label}</span>
-                                                    <span className={`font-bold text-xs ${isActive ? 'text-blue-800' : ''}`}>{byTopic[opt.value] || 0}</span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         <button

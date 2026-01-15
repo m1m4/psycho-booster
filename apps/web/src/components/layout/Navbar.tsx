@@ -20,7 +20,6 @@ export function Navbar() {
         { label: 'מצב בוחן', href: '/exam' },
         { label: 'תיבת דואר', href: '/inbox' },
         { label: 'צפייה', href: '/viewer' },
-        { label: 'אישור', href: '/approval' }, // Added approval link
         { label: 'פיתוח', href: '/dev' },
     ];
 
