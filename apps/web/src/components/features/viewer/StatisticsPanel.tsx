@@ -167,18 +167,25 @@ export function StatisticsPanel({
                                 {activeCategory === selectedCategory ? 'הסר סינון קטגוריה' : `סנן לפי ${CATEGORY_LABELS[selectedCategory]}`}
                             </button>
 
-                            {/* Subcategories Collapsible */}
-                            <div>
-                              <button
-                                onClick={() => setShowSubcategories(prev => !prev)}
-                                className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl mb-2 transition-all group"
-                              >
-                                <span className="text-sm font-bold text-gray-700">תתי נושאים</span>
-                                <svg className={`w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-transform ${showSubcategories ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </button>
-                              {showSubcategories && (
+                                {/* Subcategories Section */}
+                                <div>
+                                    {selectedCategory === 'english' ? (
+                                        <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl mb-2 flex items-center justify-between">
+                                            <span className="text-sm font-bold text-gray-700">תתי נושאים</span>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowSubcategories(prev => !prev)}
+                                            className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl mb-2 transition-all group"
+                                        >
+                                            <span className="text-sm font-bold text-gray-700">תתי נושאים</span>
+                                            <svg className={`w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-transform ${showSubcategories ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                    
+                                    {(showSubcategories || selectedCategory === 'english') && (
                                 <div className="grid grid-cols-1 gap-2">
                                   {(SUBCATEGORY_OPTIONS[selectedCategory as keyof typeof SUBCATEGORY_OPTIONS] || []).map(opt => {
                                     const isActive = Array.isArray(activeSubcategory)
