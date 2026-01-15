@@ -45,6 +45,12 @@ export function StatisticsPanel({
         return () => unsubscribe();
     }, [queryClient]);
 
+    useEffect(() => {
+        if (selectedCategory) {
+            setShowSubcategories(false);
+        }
+    }, [selectedCategory]);
+
     if (isLoading) return <div className="p-4 bg-white rounded-xl animate-pulse h-32"></div>;
     if (isError || !stats) return null;
 
@@ -147,42 +153,42 @@ export function StatisticsPanel({
                                 {activeCategory === selectedCategory ? 'הסר סינון קטגוריה' : `סנן לפי ${CATEGORY_LABELS[selectedCategory]}`}
                             </button>
 
-                            {/* Subcategories Collapsible */
-<div>
-  <button
-    onClick={() => setShowSubcategories(prev => !prev)}
-    className="w-full flex items-center justify-between p-3 bg-gray-100 rounded-lg mb-2"
-  >
-    <span className="text-sm font-bold text-gray-600">תתי נושאים</span>
-    <svg className={`w-5 h-5 transition-transform ${showSubcategories ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  </button>
-  {showSubcategories && (
-    <div className="grid grid-cols-1 gap-2">
-      {(SUBCATEGORY_OPTIONS[selectedCategory as keyof typeof SUBCATEGORY_OPTIONS] || []).map(opt => {
-        const isActive = Array.isArray(activeSubcategory)
-          ? activeSubcategory.includes(opt.value)
-          : activeSubcategory === opt.value;
-        return (
-          <button
-            key={opt.value}
-            onClick={() => {
-              onSubcategoryClick?.(opt.value);
-              closeModal();
-            }}
-            className={`flex justify-between p-3 rounded-xl w-full transition-all text-right ${isActive
-              ? 'bg-blue-50 border border-blue-200 ring-1 ring-blue-500/20'
-              : 'bg-gray-50 hover:bg-gray-100 border border-transparent'}`}
-          >
-            <span className={`text-sm font-medium ${isActive ? 'text-blue-800' : ''}`}>{opt.label}</span>
-            <span className={`font-bold ${isActive ? 'text-blue-600' : 'text-blue-600'}`}>{bySubcategory[opt.value] || 0}</span>
-          </button>
-        );
-      })}
-    </div>
-  )}
-</div>}
+                            {/* Subcategories Collapsible */}
+                            <div>
+                              <button
+                                onClick={() => setShowSubcategories(prev => !prev)}
+                                className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl mb-2 transition-all group"
+                              >
+                                <span className="text-sm font-bold text-gray-700">תתי נושאים</span>
+                                <svg className={`w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-transform ${showSubcategories ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                              {showSubcategories && (
+                                <div className="grid grid-cols-1 gap-2">
+                                  {(SUBCATEGORY_OPTIONS[selectedCategory as keyof typeof SUBCATEGORY_OPTIONS] || []).map(opt => {
+                                    const isActive = Array.isArray(activeSubcategory)
+                                      ? activeSubcategory.includes(opt.value)
+                                      : activeSubcategory === opt.value;
+                                    return (
+                                      <button
+                                        key={opt.value}
+                                        onClick={() => {
+                                          onSubcategoryClick?.(opt.value);
+                                          closeModal();
+                                        }}
+                                        className={`flex justify-between p-3 rounded-xl w-full transition-all text-right ${isActive
+                                          ? 'bg-blue-50 border border-blue-200 ring-1 ring-blue-500/20'
+                                          : 'bg-gray-50 hover:bg-gray-100 border border-transparent'}`}
+                                      >
+                                        <span className={`text-sm font-medium ${isActive ? 'text-blue-800' : ''}`}>{opt.label}</span>
+                                        <span className={`font-bold ${isActive ? 'text-blue-600' : 'text-blue-600'}`}>{bySubcategory[opt.value] || 0}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
 
 
                             {/* Topics (Iterate over Subcategories to find relevant Topics) */}
