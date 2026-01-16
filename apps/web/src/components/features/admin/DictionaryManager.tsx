@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getDictionaryItems, addDictionaryItem, bulkAddDictionaryItems, deleteDictionaryItem } from '@/lib/firebase/db';
+import { getDictionaryItems, addDictionaryItem, bulkAddDictionaryItems, deleteDictionaryItem, removeNikud, bulkDeleteDictionaryItems } from '@/lib/firebase/db';
 import { DictionaryItem } from '@/types/submit';
 
 export function DictionaryManager() {
@@ -28,6 +28,85 @@ export function DictionaryManager() {
              queryClient.invalidateQueries({ queryKey: ['dictionary'] });
         }
     });
+    
+    // Bulk Delete Mutation
+    const bulkDeleteMutation = useMutation({
+        mutationFn: bulkDeleteDictionaryItems,
+        onSuccess: () => {
+             queryClient.invalidateQueries({ queryKey: ['dictionary'] });
+             setIsImportOpen(false);
+             setImportText('');
+             alert('המילים נמחקו בהצלחה!');
+        },
+        onError: (err) => {
+            console.error(err);
+            alert('שגיאה במחיקת המילים.');
+        }
+    });
+
+    const handleBulkDelete = async () => {
+        setIsProcessing(true);
+        try {
+            const lines = importText.split('\n').filter(l => l.trim());
+            const itemsToDelete: string[] = [];
+
+            // Helper to check if two items are the same (reusing the logic from duplicate prevention)
+            const areSame = (a: any, b: any) => {
+                if (a.language !== b.language) return false;
+                const wordMatch = removeNikud(a.word) === removeNikud(b.word);
+                const translationMatch = removeNikud(a.translation) === removeNikud(b.translation);
+                const nikudMatch = (a.nikud || '') === (b.nikud || '');
+                
+                if (a.language === 'he') {
+                    return wordMatch && translationMatch && nikudMatch;
+                } else {
+                    return wordMatch && translationMatch;
+                }
+            };
+
+            for (const line of lines) {
+                const parts = line.split('|').map(s => s.trim());
+                let parsedItem: any = null;
+
+                if (selectedLanguage === 'he' && parts.length >= 2) {
+                     let nikud = '';
+                     let definition = '';
+                     if (parts.length === 3) {
+                         nikud = parts[1];
+                         definition = parts[2];
+                     } else {
+                         definition = parts[1];
+                     }
+                     parsedItem = { word: parts[0], nikud, translation: definition, language: 'he' };
+                } else if (selectedLanguage === 'en' && parts.length >= 2) {
+                     parsedItem = { word: parts[0], translation: parts[1], language: 'en' };
+                }
+
+                if (parsedItem) {
+                    const found = words?.find(w => areSame(w, parsedItem));
+                    if (found) itemsToDelete.push(found.id);
+                }
+            }
+
+            if (itemsToDelete.length === 0) {
+                alert('לא נמצאו מילים תואמות למחיקה.');
+                setIsProcessing(false);
+                return;
+            }
+
+            if (!confirm(`נמצאו ${itemsToDelete.length} מילים למחיקה. להמשיך?`)) {
+                setIsProcessing(false);
+                return;
+            }
+
+            await bulkDeleteMutation.mutateAsync(itemsToDelete);
+
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     // Bulk Add Mutation
     const bulkAddMutation = useMutation({
@@ -73,7 +152,7 @@ export function DictionaryManager() {
                          }
 
                          items.push({
-                             word,
+                             word: removeNikud(word),
                              nikud,
                              translation: definition,
                              language: 'he',
@@ -93,13 +172,55 @@ export function DictionaryManager() {
                 }
             }
 
-            if (items.length === 0) {
-                alert('לא זוהו מילים תקינות. בדוק את הפורמט.');
+            // Duplicate prevention
+            const filteredItems = items.filter(item => {
+                const normalizedWord = removeNikud(item.word);
+                const currentNikud = item.nikud || '';
+                const normalizedDefinition = removeNikud(item.translation);
+                
+                // Helper to check if two items are the same based on all 3 parameters
+                const areSame = (a: any, b: any) => {
+                    if (a.language !== b.language) return false;
+                    const wordMatch = removeNikud(a.word) === removeNikud(b.word);
+                    const translationMatch = removeNikud(a.translation) === removeNikud(b.translation);
+                    const nikudMatch = (a.nikud || '') === (b.nikud || '');
+                    
+                    if (a.language === 'he') {
+                        return wordMatch && translationMatch && nikudMatch;
+                    } else {
+                        // English only has word and translation
+                        return wordMatch && translationMatch;
+                    }
+                };
+
+                // Check against already existing words in the set
+                const isDuplicate = words?.some(existing => areSame(item, existing));
+
+                // Also check against other items in the same import batch to avoid internal duplicates
+                const isBatchDuplicate = items.indexOf(item) !== items.findIndex(other => areSame(item, other));
+
+                return !isDuplicate && !isBatchDuplicate;
+            });
+
+            if (filteredItems.length === 0) {
+                if (items.length > 0) {
+                    alert('כל המילים כבר קיימות (לפי ההגדרה).');
+                } else {
+                    alert('לא זוהו מילים תקינות. בדוק את הפורמט.');
+                }
                 setIsProcessing(false);
                 return;
             }
 
-            await bulkAddMutation.mutateAsync(items);
+            if (filteredItems.length < items.length) {
+                const skipped = items.length - filteredItems.length;
+                if (!confirm(`נמצאו ${skipped} מילים כפולות שיושמטו. להמשיך?`)) {
+                    setIsProcessing(false);
+                    return;
+                }
+            }
+
+            await bulkAddMutation.mutateAsync(filteredItems);
 
         } catch (e) {
             console.error(e);
@@ -138,10 +259,13 @@ export function DictionaryManager() {
                 <div className="flex justify-between mb-4">
                     <h3 className="font-bold text-gray-700">רשימת מילים (סט {selectedSet})</h3>
                     <button 
-                        onClick={() => setIsImportOpen(true)}
+                        onClick={() => {
+                            setImportSet(selectedSet);
+                            setIsImportOpen(true);
+                        }}
                         className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                     >
-                        ייבוא/הוספה
+                        ייבוא/הוספה/מחיקה
                     </button>
                 </div>
 
@@ -234,6 +358,13 @@ export function DictionaryManager() {
                                 className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
                             >
                                 ביטול
+                            </button>
+                            <button 
+                                onClick={handleBulkDelete}
+                                disabled={isProcessing || !importText.trim()}
+                                className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 disabled:opacity-50 font-bold"
+                            >
+                                {isProcessing ? 'מעבד...' : 'מחק מילים מהרשימה'}
                             </button>
                             <button 
                                 onClick={handleBulkImport}

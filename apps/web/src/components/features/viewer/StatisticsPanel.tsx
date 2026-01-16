@@ -186,7 +186,7 @@ export function StatisticsPanel({
                                     )}
                                     
                                     {(showSubcategories || selectedCategory === 'english') && (
-                                <div className="grid grid-cols-1 gap-2">
+                                <div className="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto pr-1">
                                   {(SUBCATEGORY_OPTIONS[selectedCategory as keyof typeof SUBCATEGORY_OPTIONS] || []).map(opt => {
                                     const isActive = Array.isArray(activeSubcategory)
                                       ? activeSubcategory.includes(opt.value)
@@ -215,7 +215,7 @@ export function StatisticsPanel({
                             {/* Topics (Iterate over Subcategories to find relevant Topics) */}
                             <div>
                                 <h4 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">נושאים (Topics)</h4>
-                                <div className="space-y-4">
+                                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
                                     {(SUBCATEGORY_OPTIONS[selectedCategory as keyof typeof SUBCATEGORY_OPTIONS] || []).map(subOpt => {
                                         const subTopics = TOPIC_OPTIONS[subOpt.value];
                                         if (!subTopics) return null;

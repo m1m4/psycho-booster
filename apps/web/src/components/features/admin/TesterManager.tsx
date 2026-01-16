@@ -97,7 +97,7 @@ export function TesterManager() {
                         <p className="text-gray-400 text-sm">אין בוחנים רשומים כרגע</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto pr-1">
                         {testers.map((tester) => (
                             <div key={tester.email} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl group hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all">
                                 <div className="flex items-center gap-3">

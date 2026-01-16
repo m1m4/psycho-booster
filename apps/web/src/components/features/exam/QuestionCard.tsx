@@ -104,7 +104,19 @@ export function QuestionCard({
             )}
 
             {/* Question Section */}
-            <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100 relative">
+                {(question as any).difficulty && (
+                    <div className={`
+                        absolute -top-3 right-6 px-3 py-1 rounded-full text-xs font-bold border shadow-sm
+                        ${(question as any).difficulty === 'easy' ? 'bg-green-100 text-green-700 border-green-200' : 
+                          (question as any).difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : 
+                          'bg-red-100 text-red-700 border-red-200'}
+                    `}>
+                        {(question as any).difficulty === 'easy' ? 'רמה: נמוכה' : 
+                         (question as any).difficulty === 'medium' ? 'רמה: בינונית' : 
+                         'רמה: גבוהה'}
+                    </div>
+                )}
                 <div 
                     className={`${questionFontSize} font-medium text-gray-900 whitespace-pre-wrap leading-relaxed ${isEnglish && !hasHebrew(question.questionText) ? 'text-left' : 'text-right'}`}
                     dir={isEnglish && !hasHebrew(question.questionText) ? 'ltr' : 'rtl'}

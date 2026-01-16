@@ -41,6 +41,14 @@ export function sanitizeForFirestore(obj: any): any {
 }
 
 /**
+ * Removes Hebrew NiKud (vowel marks) from a string.
+ */
+export function removeNikud(text: string): string {
+    if (!text) return '';
+    return text.replace(/[\u0591-\u05C7]/g, "");
+}
+
+/**
  * Fetches a single question set from Firestore.
  * 
  * @param id The ID of the document to fetch.
@@ -630,9 +638,14 @@ export async function getDictionaryItems(
 
         // Sort client-side
         return items.sort((a, b) => {
+            if (language === 'he') {
+                // Sort by first Hebrew letter
+                return a.word.localeCompare(b.word, 'he');
+            }
+            // For English or default, sort by date descending
             const dateA = a.createdAt?.getTime() || 0;
             const dateB = b.createdAt?.getTime() || 0;
-            return dateB - dateA; // Descending
+            return dateB - dateA;
         });
 
     } catch (error) {
@@ -663,6 +676,25 @@ export async function bulkAddDictionaryItems(items: Omit<DictionaryItem, 'id' | 
         await batch.commit();
     } catch (error) {
         console.error("Error bulk adding dictionary items:", error);
+        throw error;
+    }
+}
+
+/**
+ * Bulk deletes dictionary items by their IDs.
+ */
+export async function bulkDeleteDictionaryItems(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    
+    try {
+        const batch = writeBatch(db);
+        ids.forEach(id => {
+            const docRef = doc(db, "dictionary_items", id);
+            batch.delete(docRef);
+        });
+        await batch.commit();
+    } catch (error) {
+        console.error("Error bulk deleting dictionary items:", error);
         throw error;
     }
 }
