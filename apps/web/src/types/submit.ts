@@ -134,3 +134,17 @@ export interface QuestionFilters {
     difficulty?: string;
     excludeAuthor?: string;
 }
+
+export interface DictionaryItem {
+    id: string;             // Auto-generated
+    word: string;           // The main word (e.g., "של")
+    nikud?: string;         // Hebrew vocalization (e.g., "שַׁל") - Essential for Hebrew
+    translation: string;    // Hebrew translation (for English words) or definition (for Hebrew words)
+    language: 'he' | 'en';  // 'he' for Hebrew, 'en' for English
+    partOfSpeech?: string;  // verb, noun, adjective (optional)
+    synonyms?: string[];    // Optional list of synonyms
+    exampleSentence?: string; // Optional context
+    set: number;            // 1-10 (1 = least important, 10 = most important)
+    difficulty?: number;    // 1-10 (calculated or manual)
+    createdAt?: any;
+}

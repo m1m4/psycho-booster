@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { AISettingsModal } from './AISettingsModal';
+import { useQuery } from '@tanstack/react-query';
+import { getDictionaryItems } from '@/lib/firebase/db';
 
 interface AIControlPanelProps {
     category: string;
@@ -39,6 +41,20 @@ export function AIControlPanel({
     const [error, setError] = useState<string | null>(null);
 
     // Prompt Construction State
+    // Check if we are in "Refinement Mode" (editing existing data)
+    const [useDictionary, setUseDictionary] = useState(false);
+    const [dictionarySet, setDictionarySet] = useState(1);
+    
+    // Determine language for dictionary
+    const dictionaryLang = category === 'english' ? 'en' : 'he';
+    const showDictionaryOption = (category === 'verbal' && subcategory === 'analogies') || category === 'english';
+
+    const { data: dictionaryWords } = useQuery({
+        queryKey: ['dictionary', dictionaryLang, dictionarySet],
+        queryFn: () => getDictionaryItems(dictionaryLang, dictionarySet, 1000), // Get all words in set
+        enabled: showDictionaryOption && useDictionary
+    });
+
     const [fullPromptPreview, setFullPromptPreview] = useState('');
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isEditingPreview, setIsEditingPreview] = useState(false);
@@ -162,10 +178,29 @@ Current Questions Data:
         // User instructions can also use variables
         promptParts.push(`User Instructions:\n${replacePlaceholders(userInstructions)}`);
 
+        // 5. Dictionary Constraints
+        if (showDictionaryOption && useDictionary && dictionaryWords && dictionaryWords.length > 0) {
+            const wordList = dictionaryWords.map(w => 
+                dictionaryLang === 'en' 
+                ? `${w.word}: ${w.translation}` 
+                : `${w.word} (${w.nikud || ''}): ${w.translation}`
+            ).join('\n');
+            
+            promptParts.push(`
+IMPORTANT VOCABULARY CONSTRAINT:
+You must construct the questions/analogies/sentences using ONLY the following vocabulary list. 
+Do not use advanced words outside this list unless absolutely necessary for basic sentence structure (connectors, pronouns).
+Focus strictly on testing the knowledge of these specific words.
+
+Vocabulary List (${dictionaryWords.length} words):
+${wordList}
+`);
+        }
+
         const constructed = promptParts.join('\n\n-----------------\n\n');
         setFullPromptPreview(constructed);
 
-    }, [category, subcategory, topic, difficulty, globalPrompts, instructions, isEditingPreview, isRefinementMode, questions]);
+    }, [category, subcategory, topic, difficulty, globalPrompts, instructions, isEditingPreview, isRefinementMode, questions, useDictionary, dictionaryWords, showDictionaryOption, dictionaryLang]);
 
     // Initialize default instructions if empty logic is handled dynamically above, 
     // but we want the placeholder to show emptiness until user types.
@@ -297,6 +332,39 @@ Current Questions Data:
                         </svg>
                     </button>
                 </div>
+
+                {/* Dictionary Selection */}
+                {showDictionaryOption && (
+                    <div className="flex items-center gap-4 bg-white/50 p-2 rounded-lg text-sm">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input 
+                                type="checkbox" 
+                                checked={useDictionary}
+                                onChange={(e) => setUseDictionary(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="font-medium text-gray-700">השתמש במילון</span>
+                        </label>
+                        
+                        {useDictionary && (
+                            <select
+                                value={dictionarySet}
+                                onChange={(e) => setDictionarySet(Number(e.target.value))}
+                                className="text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 py-1"
+                            >
+                                {[...Array(10)].map((_, i) => (
+                                    <option key={i+1} value={i+1}>סט {i+1}</option>
+                                ))}
+                            </select>
+                        )}
+                        
+                        {useDictionary && dictionaryWords && (
+                            <span className="text-xs text-gray-500">
+                                ({dictionaryWords.length} מילים זמינות)
+                            </span>
+                        )}
+                    </div>
+                )}
 
                 {/* Expandable Instructions Area */}
                 {isExpanded && (

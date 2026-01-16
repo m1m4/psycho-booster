@@ -19,7 +19,7 @@ import {
     getCountFromServer
 } from "firebase/firestore";
 import { db } from "./config";
-import { QuestionSet, QuestionFilters } from "@/types/submit";
+import { QuestionSet, QuestionFilters, DictionaryItem } from "@/types/submit";
 
 /**
  * Recursively removes keys with undefined values from an object.
@@ -540,6 +540,118 @@ export async function saveGlobalPrompts(prompts: { base_prompt: string, categori
         await import("firebase/firestore").then(mod => mod.setDoc(docRef, prompts));
     } catch (error) {
         console.error("Error saving global prompts:", error);
+        throw error;
+    }
+}
+
+// --- Dictionary Management ---
+
+/**
+ * Adds a single dictionary item.
+ */
+export async function addDictionaryItem(item: Omit<DictionaryItem, 'id' | 'createdAt'>): Promise<string> {
+    try {
+        const docRef = doc(collection(db, "dictionary_items"));
+        const cleanData = sanitizeForFirestore(item);
+        
+        await import("firebase/firestore").then(mod => mod.setDoc(docRef, {
+            ...cleanData,
+            id: docRef.id,
+            createdAt: serverTimestamp()
+        }));
+        
+        return docRef.id;
+    } catch (error) {
+        console.error("Error adding dictionary item:", error);
+        throw error;
+    }
+}
+
+/**
+ * Updates a dictionary item.
+ */
+export async function updateDictionaryItem(id: string, item: Partial<DictionaryItem>): Promise<void> {
+    try {
+        const docRef = doc(db, "dictionary_items", id);
+        const cleanData = sanitizeForFirestore(item);
+        
+        await import("firebase/firestore").then(mod => mod.updateDoc(docRef, {
+            ...cleanData,
+            updatedAt: serverTimestamp()
+        }));
+    } catch (error) {
+        console.error("Error updating dictionary item:", error);
+        throw error;
+    }
+}
+
+/**
+ * Deletes a dictionary item.
+ */
+export async function deleteDictionaryItem(id: string): Promise<void> {
+    try {
+        const docRef = doc(db, "dictionary_items", id);
+        await import("firebase/firestore").then(mod => mod.deleteDoc(docRef));
+    } catch (error) {
+        console.error("Error deleting dictionary item:", error);
+        throw error;
+    }
+}
+
+/**
+ * Fetches dictionary items with optional filtering.
+ */
+export async function getDictionaryItems(
+    language?: 'he' | 'en', 
+    set?: number,
+    limitCount: number = 100
+): Promise<DictionaryItem[]> {
+    try {
+        let q = query(collection(db, "dictionary_items"), orderBy('createdAt', 'desc'), limit(limitCount));
+        
+        const constraints: any[] = [];
+        if (language) constraints.push(where('language', '==', language));
+        if (set) constraints.push(where('set', '==', set));
+        
+        if (constraints.length > 0) {
+             // Note: Compound queries might require index
+             q = query(collection(db, "dictionary_items"), ...constraints, orderBy('createdAt', 'desc'), limit(limitCount));
+        }
+
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ 
+            ...doc.data(), 
+            id: doc.id,
+            createdAt: doc.data().createdAt?.toDate() 
+        } as DictionaryItem));
+    } catch (error) {
+        console.error("Error fetching dictionary items:", error);
+        throw error; // Propagate error
+    }
+}
+
+/**
+ * Bulk adds dictionary items.
+ */
+export async function bulkAddDictionaryItems(items: Omit<DictionaryItem, 'id' | 'createdAt'>[]): Promise<void> {
+    if (items.length === 0) return;
+    
+    try {
+        const batch = writeBatch(db);
+        
+        items.forEach(item => {
+            const docRef = doc(collection(db, "dictionary_items"));
+            const cleanData = sanitizeForFirestore(item);
+            batch.set(docRef, {
+                ...cleanData,
+                id: docRef.id,
+                createdAt: serverTimestamp()
+            });
+        });
+        
+        await batch.commit();
+    } catch (error) {
+        console.error("Error bulk adding dictionary items:", error);
         throw error;
     }
 }
