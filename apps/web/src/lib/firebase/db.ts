@@ -16,15 +16,14 @@ import {
     Timestamp,
     increment,
     onSnapshot,
-    getCountFromServer
+    getCountFromServer,
+    QueryConstraint
 } from "firebase/firestore";
 import { db } from "./config";
 import { QuestionSet, QuestionFilters, DictionaryItem } from "@/types/submit";
 
-/**
- * Recursively removes keys with undefined values from an object.
- * Firestore does not support undefined values.
- */
+// ... (Rest of file kept as is until function)
+
 export function sanitizeForFirestore(obj: any): any {
     if (obj === null || obj === undefined) return null;
     if (Array.isArray(obj)) return obj.map(sanitizeForFirestore);
@@ -607,15 +606,12 @@ export async function getDictionaryItems(
     limitCount: number = 100
 ): Promise<DictionaryItem[]> {
     try {
-        // Start with basic collection reference
-        let q = collection(db, "dictionary_items") as any;
+        let q;
+        const constraints: QueryConstraint[] = [];
         
-        const constraints: any[] = [];
         if (language) constraints.push(where('language', '==', language));
         if (set) constraints.push(where('set', '==', set));
         
-        // Apply filters
-        // Note: We removed orderBy('createdAt') to avoid needing a composite index for every combination
         if (constraints.length > 0) {
              q = query(collection(db, "dictionary_items"), ...constraints, limit(limitCount));
         } else {
@@ -623,11 +619,14 @@ export async function getDictionaryItems(
         }
 
         const snapshot = await getDocs(q);
-        const items = snapshot.docs.map(doc => ({ 
-            ...doc.data(), 
-            id: doc.id,
-            createdAt: doc.data().createdAt?.toDate() 
-        } as DictionaryItem));
+        const items = snapshot.docs.map(doc => {
+            const data = doc.data() as any;
+            return { 
+                ...data, 
+                id: doc.id,
+                createdAt: data.createdAt?.toDate() 
+            } as DictionaryItem;
+        });
 
         // Sort client-side
         return items.sort((a, b) => {
