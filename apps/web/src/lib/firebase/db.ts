@@ -607,26 +607,38 @@ export async function getDictionaryItems(
     limitCount: number = 100
 ): Promise<DictionaryItem[]> {
     try {
-        let q = query(collection(db, "dictionary_items"), orderBy('createdAt', 'desc'), limit(limitCount));
+        // Start with basic collection reference
+        let q = collection(db, "dictionary_items") as any;
         
         const constraints: any[] = [];
         if (language) constraints.push(where('language', '==', language));
         if (set) constraints.push(where('set', '==', set));
         
+        // Apply filters
+        // Note: We removed orderBy('createdAt') to avoid needing a composite index for every combination
         if (constraints.length > 0) {
-             // Note: Compound queries might require index
-             q = query(collection(db, "dictionary_items"), ...constraints, orderBy('createdAt', 'desc'), limit(limitCount));
+             q = query(collection(db, "dictionary_items"), ...constraints, limit(limitCount));
+        } else {
+             q = query(collection(db, "dictionary_items"), limit(limitCount));
         }
 
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ 
+        const items = snapshot.docs.map(doc => ({ 
             ...doc.data(), 
             id: doc.id,
             createdAt: doc.data().createdAt?.toDate() 
         } as DictionaryItem));
+
+        // Sort client-side
+        return items.sort((a, b) => {
+            const dateA = a.createdAt?.getTime() || 0;
+            const dateB = b.createdAt?.getTime() || 0;
+            return dateB - dateA; // Descending
+        });
+
     } catch (error) {
         console.error("Error fetching dictionary items:", error);
-        throw error; // Propagate error
+        throw error;
     }
 }
 
