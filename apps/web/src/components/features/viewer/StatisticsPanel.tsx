@@ -263,7 +263,24 @@ export function StatisticsPanel({
                                                                     }`}
                                                                 >
                                                                     <span className={`text-xs font-medium ${isActive ? 'text-blue-800' : 'text-gray-700'}`}>{opt.label}</span>
-                                                                    <span className={`font-bold text-xs ${isActive ? 'text-blue-800' : 'text-blue-600'}`}>{byTopic[opt.value] || 0}</span>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className={`font-bold text-xs ${isActive ? 'text-blue-800' : 'text-blue-600'}`}>
+                                                                            {byTopic[opt.value] || 0}
+                                                                        </span>
+                                                                        {stats.byTopicDifficulty?.[opt.value] && (
+                                                                            <div className="flex gap-1 ml-1 scale-90 origin-right">
+                                                                                <span className="w-5 h-5 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[9px] font-bold border border-green-200 shadow-sm" title="קל">
+                                                                                    {stats.byTopicDifficulty[opt.value].easy || 0}
+                                                                                </span>
+                                                                                <span className="w-5 h-5 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center text-[9px] font-bold border border-yellow-200 shadow-sm" title="בינוני">
+                                                                                    {stats.byTopicDifficulty[opt.value].medium || 0}
+                                                                                </span>
+                                                                                <span className="w-5 h-5 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-[9px] font-bold border border-red-200 shadow-sm" title="קשה">
+                                                                                    {stats.byTopicDifficulty[opt.value].hard || 0}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </button>
                                                             );
                                                         })}

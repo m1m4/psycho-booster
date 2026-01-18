@@ -120,6 +120,10 @@ export async function saveQuestionSet(data: Omit<QuestionSet, 'id' | 'createdAt'
             if (data.topic) {
                 const topicKey = `byTopic.${data.topic}`;
                 updates[topicKey] = increment(1);
+                
+                // Track difficulty breakdown for topic
+                const topicDiffKey = `byTopicDifficulty.${data.topic}.${data.difficulty || 'medium'}`;
+                updates[topicDiffKey] = increment(1);
             }
 
             transaction.update(statsRef, updates);
@@ -182,17 +186,30 @@ export async function updateQuestionSet(id: string, data: Partial<QuestionSet>):
             if ('topic' in data) {
                 const oldTopic = oldData.topic;
                 const newTopic = data.topic;
+                const difficulty = data.difficulty || oldData.difficulty || 'medium';
 
                 if (oldTopic !== newTopic) {
                     if (oldTopic) {
                         statsUpdates[`byTopic.${oldTopic}`] = increment(-1);
+                        statsUpdates[`byTopicDifficulty.${oldTopic}.${oldData.difficulty || 'medium'}`] = increment(-1);
                         statsChanged = true;
                     }
                     if (newTopic) {
                         statsUpdates[`byTopic.${newTopic}`] = increment(1);
+                        statsUpdates[`byTopicDifficulty.${newTopic}.${difficulty}`] = increment(1);
                         statsChanged = true;
                     }
+                } else if (data.difficulty && data.difficulty !== oldData.difficulty && oldTopic) {
+                    // Same topic, but difficulty changed
+                    statsUpdates[`byTopicDifficulty.${oldTopic}.${oldData.difficulty || 'medium'}`] = increment(-1);
+                    statsUpdates[`byTopicDifficulty.${oldTopic}.${data.difficulty}`] = increment(1);
+                    statsChanged = true;
                 }
+            } else if (data.difficulty && data.difficulty !== oldData.difficulty && oldData.topic) {
+                // Topic didn't change (and wasn't in partial data), but difficulty did
+                statsUpdates[`byTopicDifficulty.${oldData.topic}.${oldData.difficulty || 'medium'}`] = increment(-1);
+                statsUpdates[`byTopicDifficulty.${oldData.topic}.${data.difficulty}`] = increment(1);
+                statsChanged = true;
             }
 
             // Check Author Change
@@ -289,7 +306,14 @@ export async function getStatistics() {
         if (docSnap.exists()) {
             return docSnap.data();
         } else {
-            return { totalQuestions: 0, bySubcategory: {}, byStatus: {}, byTopic: {}, byCategory: {} };
+            return { 
+                totalQuestions: 0, 
+                bySubcategory: {}, 
+                byStatus: {}, 
+                byTopic: {}, 
+                byCategory: {},
+                byTopicDifficulty: {}
+            };
         }
     } catch (error) {
         console.error("Error fetching statistics:", error);
@@ -432,6 +456,7 @@ export async function recalculateStatistics() {
             byDifficulty: {} as Record<string, number>,
             byTopic: {} as Record<string, number>,
             byAuthor: {} as Record<string, number>,
+            byTopicDifficulty: {} as Record<string, Record<string, number>>,
             authorsByCategory: {} as Record<string, Set<string>>,
             subcategoriesByCategory: {} as Record<string, Set<string>>,
             topicsBySubcategory: {} as Record<string, Set<string>>
@@ -465,6 +490,12 @@ export async function recalculateStatistics() {
 
             if (data.topic) {
                 stats.byTopic[data.topic] = (stats.byTopic[data.topic] || 0) + 1;
+                
+                if (!stats.byTopicDifficulty[data.topic]) {
+                    stats.byTopicDifficulty[data.topic] = { easy: 0, medium: 0, hard: 0 };
+                }
+                stats.byTopicDifficulty[data.topic][difficulty] = (stats.byTopicDifficulty[data.topic][difficulty] || 0) + 1;
+
                 if (!stats.topicsBySubcategory[sub]) stats.topicsBySubcategory[sub] = new Set();
                 stats.topicsBySubcategory[sub].add(data.topic);
             }
