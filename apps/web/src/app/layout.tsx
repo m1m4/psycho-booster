@@ -31,9 +31,9 @@ export const metadata: Metadata = {
     title: "Psycho Booster",
   },
   icons: {
-    icon: "/logo.jpg",
+    icon: "/logo.png",
     apple: [
-      { url: "/logo.jpg", sizes: "192x192", type: "image/jpeg" },
+      { url: "/logo.png", sizes: "192x192", type: "image/png" },
     ],
   },
 };

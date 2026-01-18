@@ -36,7 +36,7 @@ export function Navbar() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-8">
                     <Link href="/" className="flex items-center gap-2 text-xl font-bold text-black hover:opacity-80 transition-opacity">
-                        <img src="/logo.jpg" alt="Logo" className="w-10 h-10 rounded-lg shadow-sm" />
+                        <img src="/logo.png" alt="Logo" className="w-10 h-10 shadow-sm" />
                         <span>Psycho Booster</span>
                     </Link>
 
